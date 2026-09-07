@@ -30,3 +30,7 @@ server/prisma/*.db-journal
 
 # Database backups
 server/backups/
+
+# Tooling / workflow (not part of source code)
+.opencode/
+openspec/
