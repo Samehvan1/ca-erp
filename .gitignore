@@ -34,3 +34,4 @@ server/backups/
 # Tooling / workflow (not part of source code)
 .opencode/
 openspec/
+Session_handoff.md
