@@ -1,5 +1,6 @@
 const TOKEN_KEY = "ca_token";
 const USER_KEY = "ca_user";
+const API_BASE = import.meta.env.VITE_API_BASE || "/api/v1";
 
 export interface User {
   id: number;
@@ -44,7 +45,7 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`/api/v1${path}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
