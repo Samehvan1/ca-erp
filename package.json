@@ -1,0 +1,20 @@
+{
+  "name": "capital-agro-erp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capital Agro Holding - Enterprise Stock Control & Purchases System",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace server",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "test": "npm run test --workspace server",
+    "seed": "npm run seed --workspace server",
+    "start": "npm run start --workspace server"
+  }
+}

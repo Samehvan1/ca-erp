@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: capital_agro
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/capital_agro
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (server)
+        working-directory: server
+        run: npm audit --audit-level=high
+
+      - name: Audit dependencies (client)
+        working-directory: client
+        run: npm audit --audit-level=high
+
+      - name: Install PostgreSQL client (psql for test DB bootstrap)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Generate Prisma client
+        working-directory: server
+        run: npx prisma generate
+
+      - name: Type-check server
+        working-directory: server
+        run: npx tsc --noEmit
+
+      - name: Run test suite (fresh capital_agro_test + seed via global-setup)
+        working-directory: server
+        run: npm test
+
+      - name: Build server
+        working-directory: server
+        run: npm run build
+
+      - name: Build client
+        working-directory: client
+        run: npm run build
+
+      - name: Validate OpenSpec changes
+        run: npx openspec validate --all --strict

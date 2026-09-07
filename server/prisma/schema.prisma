@@ -1,0 +1,974 @@
+// Capital Agro Holding - Enterprise Stock Control & Purchases System
+// Prisma schema covering all 9 SRS modules
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS ============
+
+enum ProjectScope {
+  FANSHY
+  OSTA_ROSTO
+  SPACCA
+  GROUP
+  OTHER
+}
+
+enum WarehouseType {
+  PROJECT_CENTRAL
+  GROUP_CENTRAL
+  BRANCH
+  TRANSIT
+}
+
+enum ItemScope {
+  PROJECT_ISOLATED
+  CROSS_PROJECT
+}
+
+enum ValuationMethod {
+  WAC
+  FIFO
+}
+
+enum Role {
+  ADMIN
+  GROUP_EXECUTIVE
+  CFO
+  PROCUREMENT_OFFICER
+  PROJECT_WAREHOUSE_MANAGER
+  BRANCH_MANAGER
+  HEAD_CHEF
+  HEAD_BARISTA
+  COST_CONTROLLER
+}
+
+enum PaymentTerms {
+  COD
+  NET_30
+  NET_60
+  NET_90
+}
+
+enum PoStatus {
+  OPEN
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
+  FORCE_CLOSED
+}
+
+enum GrnStatus {
+  RECEIVED
+  QC_PASSED
+  QC_PARTIAL
+  QUARANTINED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_APPROVED
+  APPROVED
+  REJECTED
+}
+
+enum PaymentType {
+  DOWN_PAYMENT
+  MILESTONE
+  TRANCH
+  RETAINAGE_RELEASE
+}
+
+enum RequisitionType {
+  MANUAL
+  ROP
+  GROUP_CONSOLIDATED
+}
+
+enum RequisitionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransferStatus {
+  REQUESTED
+  APPROVED
+  DISPATCHED
+  IN_TRANSIT
+  RECEIVED
+  CANCELLED
+}
+
+enum StocktakeType {
+  FULL
+  CYCLE
+}
+
+enum StocktakeStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AdjustmentReason {
+  WASTE
+  DAMAGE
+  THEFT
+  COUNT_DIFFERENCE
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WasteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PosTransactionStatus {
+  BUFFERED
+  SYNCED
+  PROCESSED
+  FAILED
+}
+
+enum RecipeType {
+  MENU_ITEM
+  PREP
+  FINISHED_GOOD
+}
+
+enum GlAccountType {
+  ASSET
+  LIABILITY
+  EXPENSE
+  REVENUE
+  EQUITY
+}
+
+enum ApEntryType {
+  INVOICE
+  PAYMENT
+  ADVANCE
+  MILESTONE
+  RETAINAGE
+  RETAINAGE_RELEASE
+}
+
+enum CostCenterLevel {
+  HOLDING
+  PROJECT
+  WAREHOUSE
+}
+
+enum ReportFrequency {
+  REAL_TIME
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  DENIED
+  APPROVE
+  REJECT
+  POST
+  TRANSFER
+  ADJUST
+  SCAN
+  RECEIVE
+  DISPATCH
+}
+
+// ============ TENANT STRUCTURE ============
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  scope       ProjectScope
+  description String?
+  isGroup     Boolean   @default(false)
+  warehouses  Warehouse[]
+  users       User[]
+  items       Item[]
+  recipes     Recipe[]
+  costCenters CostCenter[]
+  requisitions Requisition[]
+  transferRequisitions TransferRequisition[]
+  posTerminals PosTerminal[]
+  purchaseOrders PurchaseOrder[]
+  createdAt   DateTime  @default(now())
+}
+
+model Warehouse {
+  id        Int           @id @default(autoincrement())
+  code      String        @unique
+  name      String
+  type      WarehouseType
+  projectId Int?
+  project   Project?      @relation(fields: [projectId], references: [id])
+  address   String?
+  city      String?
+  country   String        @default("Egypt")
+  owner     String?
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  costCenters CostCenter[]
+  batches   Batch[]
+  stockLedgers StockLedger[]
+  reorderPoints ReorderPoint[]
+  transferRequisitionsFrom TransferRequisition[] @relation("FromWarehouse")
+  transferRequisitionsTo TransferRequisition[] @relation("ToWarehouse")
+  wasteLogs WasteLog[]
+  varianceRecords VarianceRecord[]
+  stocktakes Stocktake[]
+  adjustments Adjustment[]
+}
+
+// ============ SECURITY (Module 8) ============
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role
+  projectId    Int?
+  project      Project?   @relation(fields: [projectId], references: [id])
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  auditLogs    AuditLog[]
+  requisitions Requisition[]
+  approvals    Approval[]
+  approvedPos  PurchaseOrder[] @relation("ApprovedBy")
+  receivedGrns Grn[]
+  transferRequisitions TransferRequisition[]
+  transferReceipts TransferReceipt[]
+  wasteLogs    WasteLog[]
+  approvedWasteLogs WasteLog[] @relation("ApprovedWaste")
+  adjustments  Adjustment[]
+  approvedAdjustments Adjustment[] @relation("ApprovedAdjustment")
+  createdPos   PurchaseOrder[] @relation("CreatedBy")
+  resetTokens  PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         Int         @id @default(autoincrement())
+  userId     Int?
+  user       User?       @relation(fields: [userId], references: [id])
+  action     AuditAction
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  timestamp  DateTime    @default(now())
+  hash       String
+  prevHash   String?
+}
+
+// ============ SUPPLIER MANAGEMENT (Module 1) ============
+
+model Vendor {
+  id               Int           @id @default(autoincrement())
+  code             String        @unique
+  name             String
+  registrationNo   String?
+  taxId            String?
+  taxType          String?       // e.g. "No Tax", "VAT"
+  taxRate          Float         @default(0)
+  bankDetails      String?
+  paymentTerms     PaymentTerms  @default(NET_30)
+  supplyCategories Json?
+  approvalStatus   String        @default("PENDING") // PENDING | APPROVED | REJECTED
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  vendorItems      VendorItem[]
+  vendorBrands     VendorBrandVariant[]
+  priceLists       PriceList[]
+  slas             VendorSla[]
+  purchaseOrders   PurchaseOrder[]
+  invoices         Invoice[]
+  payments         Payment[]
+  debitNotes       DebitNote[]
+  apLedger         ApLedger[]
+}
+
+model VendorItem {
+  id        Int    @id @default(autoincrement())
+  vendorId  Int
+  vendor    Vendor @relation(fields: [vendorId], references: [id])
+  itemId    Int
+  item      Item   @relation(fields: [itemId], references: [id])
+  isExclusive Boolean @default(false)
+
+  @@unique([vendorId, itemId])
+}
+
+model VendorBrandVariant {
+  id             Int          @id @default(autoincrement())
+  vendorId       Int
+  vendor         Vendor       @relation(fields: [vendorId], references: [id])
+  brandVariantId Int
+  brandVariant   BrandVariant @relation(fields: [brandVariantId], references: [id])
+  isExclusive    Boolean      @default(false)
+
+  @@unique([vendorId, brandVariantId])
+}
+
+model PriceList {
+  id             Int          @id @default(autoincrement())
+  vendorId       Int
+  vendor         Vendor       @relation(fields: [vendorId], references: [id])
+  brandVariantId Int
+  brandVariant   BrandVariant @relation(fields: [brandVariantId], references: [id])
+  unitPrice      Float
+  validFrom      DateTime
+  validTo        DateTime?
+  moq            Float        @default(0)
+  active         Boolean      @default(true)
+  tiers          PriceTier[]
+}
+
+model PriceTier {
+  id          Int       @id @default(autoincrement())
+  priceListId Int
+  priceList   PriceList @relation(fields: [priceListId], references: [id])
+  minQty      Float
+  discountPct Float
+}
+
+model VendorSla {
+  id                Int      @id @default(autoincrement())
+  vendorId          Int
+  vendor            Vendor   @relation(fields: [vendorId], references: [id])
+  periodStart       DateTime
+  periodEnd         DateTime
+  otifRate          Float    @default(0)
+  priceVarianceRate Float    @default(0)
+  qcRejectionRate   Float    @default(0)
+  docAccuracyRate   Float    @default(0)
+}
+
+// ============ PROCUREMENT (Module 2) ============
+
+model Requisition {
+  id            Int                @id @default(autoincrement())
+  number        String             @unique
+  projectId     Int
+  project       Project            @relation(fields: [projectId], references: [id])
+  type          RequisitionType    @default(MANUAL)
+  status        RequisitionStatus  @default(DRAFT)
+  totalValue    Float              @default(0)
+  requestedById Int
+  requestedBy   User               @relation(fields: [requestedById], references: [id])
+  costCenterId  Int?
+  costCenter    CostCenter?        @relation(fields: [costCenterId], references: [id])
+  items         RequisitionItem[]
+  approvals     Approval[]
+  createdAt     DateTime           @default(now())
+}
+
+model RequisitionItem {
+  id             Int          @id @default(autoincrement())
+  requisitionId  Int
+  requisition    Requisition  @relation(fields: [requisitionId], references: [id])
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  quantity       Float
+  unitPrice      Float        @default(0)
+}
+
+model Approval {
+  id            Int             @id @default(autoincrement())
+  requisitionId Int
+  requisition   Requisition     @relation(fields: [requisitionId], references: [id])
+  level         Int
+  approverId    Int
+  approver      User            @relation(fields: [approverId], references: [id])
+  status        ApprovalStatus  @default(PENDING)
+  comment       String?
+  decidedAt     DateTime?
+}
+
+model PurchaseOrder {
+  id             Int                  @id @default(autoincrement())
+  number         String               @unique
+  vendorId       Int
+  vendor         Vendor               @relation(fields: [vendorId], references: [id])
+  projectId      Int
+  project        Project              @relation(fields: [projectId], references: [id])
+  status         PoStatus             @default(OPEN)
+  orderedQty     Float                @default(0)
+  receivedQty    Float                @default(0)
+  outstandingQty Float                @default(0)
+  totalValue     Float                @default(0)
+  subTotal       Float                @default(0)
+  vatAmount      Float                @default(0)
+  discountAmount Float                @default(0)
+  feesAmount     Float                @default(0)
+  currency       String               @default("EGP")
+  approvedById   Int?
+  approvedBy     User?                @relation("ApprovedBy", fields: [approvedById], references: [id])
+  createdById    Int?
+  createdBy      User?                @relation("CreatedBy", fields: [createdById], references: [id])
+  items          PurchaseOrderItem[]
+  grns           Grn[]
+  invoices       Invoice[]
+  payments       Payment[]
+  landedCosts    LandedCost[]
+  apLedger       ApLedger[]
+  createdAt      DateTime             @default(now())
+}
+
+model PurchaseOrderItem {
+  id             Int            @id @default(autoincrement())
+  poId           Int
+  po             PurchaseOrder  @relation(fields: [poId], references: [id])
+  itemId         Int
+  item           Item           @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant?  @relation(fields: [brandVariantId], references: [id])
+  orderedQty     Float
+  receivedQty    Float          @default(0)
+  unitPrice      Float
+  taxPct         Float          @default(0)
+  discountPct    Float          @default(0)
+  landedCost     Float          @default(0)
+  grnItems       GrnItem[]
+}
+
+model Grn {
+  id           Int        @id @default(autoincrement())
+  number       String     @unique
+  poId         Int
+  po           PurchaseOrder @relation(fields: [poId], references: [id])
+  receivedAt   DateTime   @default(now())
+  status       GrnStatus  @default(RECEIVED)
+  receivedById Int
+  receivedBy   User       @relation(fields: [receivedById], references: [id])
+  items        GrnItem[]
+  debitNotes   DebitNote[]
+}
+
+model GrnItem {
+  id             Int            @id @default(autoincrement())
+  grnId          Int
+  grn            Grn            @relation(fields: [grnId], references: [id])
+  poItemId       Int
+  poItem         PurchaseOrderItem @relation(fields: [poItemId], references: [id])
+  itemId         Int
+  item           Item           @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant?  @relation(fields: [brandVariantId], references: [id])
+  receivedQty    Float
+  acceptedQty    Float          @default(0)
+  quarantinedQty Float          @default(0)
+  batchId        Int?
+  batch          Batch?         @relation(fields: [batchId], references: [id])
+  invoiceItems   InvoiceItem[]
+}
+
+model DebitNote {
+  id        Int      @id @default(autoincrement())
+  number    String   @unique
+  grnId     Int
+  grn       Grn      @relation(fields: [grnId], references: [id])
+  vendorId  Int
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  amount    Float
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id        Int           @id @default(autoincrement())
+  number    String        @unique
+  vendorId  Int
+  vendor    Vendor        @relation(fields: [vendorId], references: [id])
+  poId      Int
+  po        PurchaseOrder @relation(fields: [poId], references: [id])
+  amount    Float
+  status    InvoiceStatus @default(PENDING)
+  items     InvoiceItem[]
+  payments  Payment[]
+  apLedger  ApLedger[]
+  createdAt DateTime      @default(now())
+}
+
+model InvoiceItem {
+  id        Int     @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  grnItemId Int
+  grnItem   GrnItem @relation(fields: [grnItemId], references: [id])
+  quantity  Float
+  unitPrice Float
+}
+
+model Payment {
+  id                Int         @id @default(autoincrement())
+  number            String      @unique
+  vendorId          Int
+  vendor            Vendor      @relation(fields: [vendorId], references: [id])
+  poId              Int?
+  po                PurchaseOrder? @relation(fields: [poId], references: [id])
+  invoiceId         Int?
+  invoice           Invoice?    @relation(fields: [invoiceId], references: [id])
+  type              PaymentType
+  amount            Float
+  paidAt            DateTime    @default(now())
+  ledgerBalanceAfter Float      @default(0)
+}
+
+model LandedCost {
+  id              Int    @id @default(autoincrement())
+  poId            Int
+  po              PurchaseOrder @relation(fields: [poId], references: [id])
+  type            String // FREIGHT | CUSTOMS | CLEARANCE
+  amount          Float
+  allocatedAmount Float  @default(0)
+}
+
+// ============ INVENTORY (Module 3) ============
+
+model Item {
+  id             Int             @id @default(autoincrement())
+  code           String          @unique
+  description    String
+  scope          ItemScope
+  projectId      Int?
+  project        Project?        @relation(fields: [projectId], references: [id])
+  category       String?
+  valuationMethod ValuationMethod @default(WAC)
+  abcClass       String?         // A | B | C
+  uom            String          @default("Each")
+  active         Boolean         @default(true)
+  brandVariants  BrandVariant[]
+  batches        Batch[]
+  reorderPoints  ReorderPoint[]
+  vendorItems    VendorItem[]
+  requisitionItems RequisitionItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  grnItems       GrnItem[]
+  transferItems  TransferItem[]
+  recipeItems    RecipeItem[]
+  wasteLogs      WasteLog[]
+  varianceRecords VarianceRecord[]
+  stocktakeItems StocktakeItem[]
+  adjustments    Adjustment[]
+  menuMappings   MenuMapping[]
+  stockLedgers   StockLedger[]
+  createdAt      DateTime        @default(now())
+}
+
+model BrandVariant {
+  id             Int                  @id @default(autoincrement())
+  itemId         Int
+  item           Item                 @relation(fields: [itemId], references: [id])
+  name           String
+  sku            String               @unique
+  barcode        String?
+  active         Boolean              @default(true)
+  vendorBrands   VendorBrandVariant[]
+  priceLists     PriceList[]
+  batches        Batch[]
+  requisitionItems RequisitionItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+  grnItems       GrnItem[]
+  transferItems  TransferItem[]
+  recipeItems    RecipeItem[]
+  wasteLogs      WasteLog[]
+  menuMappings   MenuMapping[]
+  stockLedgers   StockLedger[]
+}
+
+model Batch {
+  id             Int          @id @default(autoincrement())
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  batchNo        String
+  expiryDate     DateTime
+  quantity       Float        @default(0)
+  warehouseId    Int
+  warehouse      Warehouse    @relation(fields: [warehouseId], references: [id])
+  receivedAt     DateTime     @default(now())
+  alerts         ExpirationAlert[]
+  grnItems       GrnItem[]
+  stockLedgers   StockLedger[]
+  transferItems  TransferItem[]
+}
+
+model StockLedger {
+  id             Int          @id @default(autoincrement())
+  warehouseId    Int
+  warehouse      Warehouse    @relation(fields: [warehouseId], references: [id])
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  batchId        Int?
+  batch          Batch?       @relation(fields: [batchId], references: [id])
+  qtyIn          Float        @default(0)
+  qtyOut         Float        @default(0)
+  balance        Float        @default(0)
+  unitCost       Float        @default(0)
+  refType        String
+  refId          String?
+  timestamp      DateTime     @default(now())
+}
+
+model ReorderPoint {
+  id                 Int      @id @default(autoincrement())
+  itemId             Int
+  item               Item     @relation(fields: [itemId], references: [id])
+  warehouseId        Int
+  warehouse          Warehouse @relation(fields: [warehouseId], references: [id])
+  safetyStock        Float    @default(0)
+  reorderPoint       Float    @default(0)
+  leadTimeDays       Int      @default(7)
+  consumptionVelocity Float   @default(0)
+  updatedAt          DateTime @updatedAt
+
+  @@unique([itemId, warehouseId])
+}
+
+model ExpirationAlert {
+  id        Int      @id @default(autoincrement())
+  batchId   Int
+  batch     Batch    @relation(fields: [batchId], references: [id])
+  tier      Int      // 60 | 30 | 15 | 7
+  status    String   @default("ACTIVE") // ACTIVE | RESOLVED
+  createdAt DateTime @default(now())
+}
+
+// ============ TRANSFERS (Module 4) ============
+
+model TransferRequisition {
+  id             Int             @id @default(autoincrement())
+  number         String          @unique
+  fromWarehouseId Int
+  fromWarehouse  Warehouse       @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouseId  Int
+  toWarehouse    Warehouse       @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+  projectId      Int
+  project        Project         @relation(fields: [projectId], references: [id])
+  status         TransferStatus  @default(REQUESTED)
+  requestedById  Int
+  requestedBy    User            @relation(fields: [requestedById], references: [id])
+  orders         TransferOrder[]
+  createdAt      DateTime        @default(now())
+}
+
+model TransferOrder {
+  id             Int                @id @default(autoincrement())
+  number         String             @unique
+  requisitionId  Int
+  requisition    TransferRequisition @relation(fields: [requisitionId], references: [id])
+  status         TransferStatus     @default(APPROVED)
+  dispatchedAt   DateTime?
+  receivedAt     DateTime?
+  items          TransferItem[]
+  receipts       TransferReceipt[]
+  interCompany   InterCompanyEntry[]
+}
+
+model TransferItem {
+  id             Int          @id @default(autoincrement())
+  transferOrderId Int
+  transferOrder  TransferOrder @relation(fields: [transferOrderId], references: [id])
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  batchId        Int?
+  batch          Batch?       @relation(fields: [batchId], references: [id])
+  quantity       Float
+  receivedQty    Float        @default(0)
+  acceptedQty    Float        @default(0)
+  discrepancyQty Float        @default(0)
+  comments       String?
+}
+
+model TransferReceipt {
+  id             Int           @id @default(autoincrement())
+  transferOrderId Int
+  transferOrder  TransferOrder @relation(fields: [transferOrderId], references: [id])
+  receivedById   Int
+  receivedBy     User          @relation(fields: [receivedById], references: [id])
+  receivedAt     DateTime      @default(now())
+  lossAllocation Json?         // { sending: x, receiving: y, logistics: z }
+}
+
+model InterCompanyEntry {
+  id             Int           @id @default(autoincrement())
+  transferOrderId Int
+  transferOrder  TransferOrder @relation(fields: [transferOrderId], references: [id])
+  fromProjectId  Int
+  toProjectId    Int
+  amount         Float
+  createdAt      DateTime      @default(now())
+}
+
+// ============ RECIPE COSTING & POS (Module 5) ============
+
+model PosTerminal {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  posSystem String
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+  active    Boolean  @default(true)
+  transactions PosTransaction[]
+  menuMappings MenuMapping[]
+}
+
+model PosTransaction {
+  id            Int                @id @default(autoincrement())
+  terminalId    Int
+  terminal      PosTerminal        @relation(fields: [terminalId], references: [id])
+  transactionId String             @unique
+  payload       Json
+  status        PosTransactionStatus @default(BUFFERED)
+  processedAt   DateTime?
+  createdAt     DateTime           @default(now())
+}
+
+model MenuMapping {
+  id             Int          @id @default(autoincrement())
+  posMenuId      String
+  terminalId     Int?
+  terminal       PosTerminal? @relation(fields: [terminalId], references: [id])
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+
+  @@unique([posMenuId, terminalId])
+}
+
+model Recipe {
+  id        Int          @id @default(autoincrement())
+  code      String
+  name      String
+  projectId Int
+  project   Project      @relation(fields: [projectId], references: [id])
+  type      RecipeType
+  version   Int          @default(1)
+  active    Boolean      @default(true)
+  items     RecipeItem[]
+  createdAt DateTime     @default(now())
+
+  @@unique([code, version])
+}
+
+model RecipeItem {
+  id             Int          @id @default(autoincrement())
+  recipeId       Int
+  recipe         Recipe       @relation(fields: [recipeId], references: [id])
+  itemId         Int
+  item           Item         @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant   BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  quantity       Float
+  yieldFactor    Float        @default(1)
+  shrinkagePct   Float        @default(0)
+}
+
+model WasteLog {
+  id           Int         @id @default(autoincrement())
+  warehouseId  Int
+  warehouse    Warehouse   @relation(fields: [warehouseId], references: [id])
+  itemId       Int
+  item         Item        @relation(fields: [itemId], references: [id])
+  brandVariantId Int?
+  brandVariant BrandVariant? @relation(fields: [brandVariantId], references: [id])
+  quantity     Float
+  reason       String
+  status       WasteStatus @default(PENDING)
+  loggedById   Int
+  loggedBy     User        @relation(fields: [loggedById], references: [id])
+  approvedById Int?
+  approvedBy   User?       @relation("ApprovedWaste", fields: [approvedById], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+model VarianceRecord {
+  id            Int      @id @default(autoincrement())
+  period        String
+  itemId        Int
+  item          Item     @relation(fields: [itemId], references: [id])
+  warehouseId   Int
+  warehouse     Warehouse @relation(fields: [warehouseId], references: [id])
+  theoreticalQty Float   @default(0)
+  actualQty     Float    @default(0)
+  varianceQty   Float    @default(0)
+  variancePct   Float    @default(0)
+  createdAt     DateTime @default(now())
+}
+
+// ============ STOCKTAKING (Module 6) ============
+
+model Stocktake {
+  id           Int             @id @default(autoincrement())
+  number       String          @unique
+  warehouseId  Int
+  warehouse    Warehouse       @relation(fields: [warehouseId], references: [id])
+  type         StocktakeType
+  status       StocktakeStatus @default(SCHEDULED)
+  abcClass     String?
+  scheduledDate DateTime
+  completedAt  DateTime?
+  items        StocktakeItem[]
+  adjustments  Adjustment[]
+  createdAt    DateTime        @default(now())
+}
+
+model StocktakeItem {
+  id          Int       @id @default(autoincrement())
+  stocktakeId Int
+  stocktake   Stocktake @relation(fields: [stocktakeId], references: [id])
+  itemId      Int
+  item        Item      @relation(fields: [itemId], references: [id])
+  systemQty   Float     @default(0)
+  countedQty  Float     @default(0)
+  varianceQty Float     @default(0)
+}
+
+model Adjustment {
+  id            Int              @id @default(autoincrement())
+  number        String           @unique
+  stocktakeId   Int?
+  stocktake     Stocktake?       @relation(fields: [stocktakeId], references: [id])
+  itemId        Int
+  item          Item             @relation(fields: [itemId], references: [id])
+  warehouseId   Int
+  warehouse     Warehouse        @relation(fields: [warehouseId], references: [id])
+  quantity      Float
+  reason        AdjustmentReason
+  amount        Float            @default(0)
+  status        AdjustmentStatus @default(PENDING)
+  approvalLevel Int              @default(1)
+  requestedById Int
+  requestedBy   User             @relation(fields: [requestedById], references: [id])
+  approvedById  Int?
+  approvedBy    User?            @relation("ApprovedAdjustment", fields: [approvedById], references: [id])
+  createdAt     DateTime         @default(now())
+}
+
+// ============ FINANCE (Module 7) ============
+
+model GlAccount {
+  id   Int           @id @default(autoincrement())
+  code String        @unique
+  name String
+  type GlAccountType
+  entries GlEntry[]
+}
+
+model CostCenter {
+  id          Int            @id @default(autoincrement())
+  code        String         @unique
+  name        String
+  level       CostCenterLevel
+  projectId   Int?
+  project     Project?       @relation(fields: [projectId], references: [id])
+  warehouseId Int?
+  warehouse   Warehouse?     @relation(fields: [warehouseId], references: [id])
+  requisitions Requisition[]
+  entries     GlEntry[]
+}
+
+model GlEntry {
+  id          Int        @id @default(autoincrement())
+  accountId   Int
+  account     GlAccount  @relation(fields: [accountId], references: [id])
+  costCenterId Int?
+  costCenter  CostCenter? @relation(fields: [costCenterId], references: [id])
+  debit       Float      @default(0)
+  credit      Float      @default(0)
+  refType     String
+  refId       String?
+  postingKey  String     @unique
+  timestamp   DateTime   @default(now())
+}
+
+model ApLedger {
+  id        Int        @id @default(autoincrement())
+  vendorId  Int
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  poId      Int?
+  po        PurchaseOrder? @relation(fields: [poId], references: [id])
+  invoiceId Int?
+  invoice   Invoice?   @relation(fields: [invoiceId], references: [id])
+  entryType ApEntryType
+  amount    Float
+  balance   Float
+  createdAt DateTime   @default(now())
+}
+
+// ============ ANALYTICS (Module 9) ============
+
+model ReportDefinition {
+  id        Int            @id @default(autoincrement())
+  code      String         @unique
+  name      String
+  audience  String
+  frequency ReportFrequency
+  active    Boolean        @default(true)
+}
+
+model ReportSnapshot {
+  id          Int      @id @default(autoincrement())
+  reportCode  String
+  period      String
+  data        Json
+  generatedAt DateTime @default(now())
+}
+
+model ScheduledReport {
+  id          Int            @id @default(autoincrement())
+  reportCode  String
+  frequency   ReportFrequency
+  recipients  Json
+  active      Boolean        @default(true)
+}
