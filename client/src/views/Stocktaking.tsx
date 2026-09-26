@@ -188,10 +188,18 @@ export default function Stocktaking() {
       </div>
 
       <div className="tabs">
-        <button className={tab === "stocktakes" ? "active" : ""} onClick={() => setTab("stocktakes")}>
+        <button
+          className={tab === "stocktakes" ? "active" : ""}
+          onClick={() => setTab("stocktakes")}
+          title="Stocktakes: Physical count sessions, blind count sheets, and variance audits per warehouse"
+        >
           Stocktakes ({stocktakes.data?.length ?? 0})
         </button>
-        <button className={tab === "adjustments" ? "active" : ""} onClick={() => setTab("adjustments")}>
+        <button
+          className={tab === "adjustments" ? "active" : ""}
+          onClick={() => setTab("adjustments")}
+          title="Adjustments: Stock reconciliation postings and variance write-offs resulting from completed counts"
+        >
           Adjustments ({adjustments.data?.length ?? 0})
         </button>
       </div>

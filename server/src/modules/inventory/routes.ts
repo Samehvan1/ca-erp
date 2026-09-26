@@ -12,6 +12,15 @@ import { AdjustmentReason, AdjustmentStatus, AuditAction, ItemScope, Role, Valua
 const router = Router();
 router.use(requireAuth);
 
+// ---------- Projects ----------
+router.get(
+  "/projects",
+  asyncHandler(async (_req, res) => {
+    const list = await prisma.project.findMany({ orderBy: { id: "asc" } });
+    res.json(list);
+  })
+);
+
 // ---------- Warehouses ----------
 router.get(
   "/warehouses",
@@ -78,9 +87,14 @@ const itemSchema = z.object({
   scope: z.nativeEnum(ItemScope),
   projectId: z.number().int().nullable().optional(),
   category: z.string().optional().nullable(),
+  categoryId: z.number().int().nullable().optional(),
   valuationMethod: z.nativeEnum(ValuationMethod).optional(),
   abcClass: z.string().optional().nullable(),
   uom: z.string().optional(),
+  baseUnitId: z.number().int().nullable().optional(),
+  purchaseUnitId: z.number().int().nullable().optional(),
+  recipeUnitId: z.number().int().nullable().optional(),
+  active: z.boolean().optional(),
 });
 
 router.get(
@@ -89,7 +103,15 @@ router.get(
     const scope = scopeWhere(req.user);
     const items = await prisma.item.findMany({
       where: scope.projectId === undefined ? undefined : { OR: [{ projectId: scope.projectId }, { scope: ItemScope.CROSS_PROJECT }] },
-      include: { brandVariants: true, project: true },
+      include: {
+        brandVariants: true,
+        project: true,
+        categoryRef: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        recipeUnit: true,
+        unitConversions: { include: { fromUnit: true, toUnit: true } },
+      },
       orderBy: { code: "asc" },
     });
     res.json(items);
@@ -99,7 +121,19 @@ router.get(
 router.get(
   "/items/:id",
   asyncHandler(async (req, res) => {
-    const item = await prisma.item.findUnique({ where: { id: Number(req.params.id) }, include: { brandVariants: true, batches: true, reorderPoints: true } });
+    const item = await prisma.item.findUnique({
+      where: { id: Number(req.params.id) },
+      include: {
+        brandVariants: true,
+        batches: true,
+        reorderPoints: true,
+        categoryRef: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        recipeUnit: true,
+        unitConversions: { include: { fromUnit: true, toUnit: true } },
+      },
+    });
     if (!item) throw notFound("Item not found");
     res.json(item);
   })
@@ -110,10 +144,26 @@ router.post(
   requireRole(Role.ADMIN, Role.GROUP_EXECUTIVE, Role.PROJECT_WAREHOUSE_MANAGER),
   asyncHandler(async (req, res) => {
     const body = itemSchema.parse(req.body);
-    if (body.scope === ItemScope.PROJECT_ISOLATED && !body.projectId) throw badRequest("Project-Isolated items require a projectId");
+    if (body.scope === ItemScope.PROJECT_ISOLATED && !body.projectId) {
+      if (req.user?.projectId) {
+        body.projectId = req.user.projectId;
+      } else {
+        const firstProj = await prisma.project.findFirst({ where: { isGroup: false }, orderBy: { id: "asc" } });
+        if (firstProj) body.projectId = firstProj.id;
+        else throw badRequest("Project-Isolated items require a projectId");
+      }
+    }
     const existing = await prisma.item.findUnique({ where: { code: body.code } });
     if (existing) throw conflict("Item code exists");
-    const item = await prisma.item.create({ data: body });
+    const item = await prisma.item.create({
+      data: body,
+      include: {
+        categoryRef: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        recipeUnit: true,
+      },
+    });
     await audit({ userId: req.user!.id, action: AuditAction.CREATE, entityType: "Item", entityId: String(item.id), after: { code: item.code, scope: item.scope }, ip: req.ip });
     res.status(201).json(item);
   })
@@ -127,7 +177,16 @@ router.patch(
     const body = itemSchema.partial().parse(req.body);
     const existing = await prisma.item.findUnique({ where: { id } });
     if (!existing) throw notFound("Item not found");
-    const item = await prisma.item.update({ where: { id }, data: body });
+    const item = await prisma.item.update({
+      where: { id },
+      data: body,
+      include: {
+        categoryRef: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        recipeUnit: true,
+      },
+    });
     await audit({ userId: req.user!.id, action: AuditAction.UPDATE, entityType: "Item", entityId: String(id), before: { code: existing.code, scope: existing.scope }, after: { code: item.code, scope: item.scope }, ip: req.ip });
     res.json(item);
   })
@@ -416,12 +475,95 @@ router.get(
 
 // ---------- Adjustments ----------
 const adjustmentSchema = z.object({
+  itemId: z.number().int(),
+  warehouseId: z.number().int(),
   quantity: z.number(),
   reason: z.nativeEnum(AdjustmentReason),
-  amount: z.number().optional(),
-  status: z.nativeEnum(AdjustmentStatus).optional(),
-  approvalLevel: z.number().int().optional(),
+  amount: z.number().optional().default(0),
+  status: z.nativeEnum(AdjustmentStatus).optional().default(AdjustmentStatus.APPROVED),
+  approvalLevel: z.number().int().optional().default(1),
 });
+
+router.get(
+  "/adjustments",
+  asyncHandler(async (_req, res) => {
+    const list = await prisma.adjustment.findMany({ include: { item: true, warehouse: true, stocktake: true, requestedBy: true, approvedBy: true }, orderBy: { createdAt: "desc" } });
+    res.json(list);
+  })
+);
+
+router.post(
+  "/adjustments",
+  requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
+  asyncHandler(async (req, res) => {
+    const body = adjustmentSchema.parse(req.body);
+    const item = await prisma.item.findUnique({ where: { id: body.itemId } });
+    if (!item) throw notFound("Item not found");
+    const wh = await prisma.warehouse.findUnique({ where: { id: body.warehouseId } });
+    if (!wh) throw notFound("Warehouse not found");
+
+    const number = `ADJ-${Date.now().toString().slice(-6)}`;
+    const isApproved = body.status === AdjustmentStatus.APPROVED;
+
+    const adjustment = await prisma.adjustment.create({
+      data: {
+        number,
+        itemId: body.itemId,
+        warehouseId: body.warehouseId,
+        quantity: body.quantity,
+        reason: body.reason,
+        amount: body.amount || 0,
+        status: body.status || AdjustmentStatus.APPROVED,
+        approvalLevel: body.approvalLevel || 1,
+        requestedById: req.user!.id,
+        approvedById: isApproved ? req.user!.id : null,
+      },
+      include: { item: true, warehouse: true, requestedBy: true, approvedBy: true },
+    });
+
+    if (isApproved) {
+      await postStockMove({
+        warehouseId: body.warehouseId,
+        itemId: body.itemId,
+        qty: body.quantity,
+        refType: "ADJUSTMENT",
+        refId: number,
+      });
+    }
+
+    await audit({
+      userId: req.user!.id,
+      action: AuditAction.ADJUST,
+      entityType: "Adjustment",
+      entityId: String(adjustment.id),
+      after: { number, itemId: body.itemId, warehouseId: body.warehouseId, quantity: body.quantity, status: adjustment.status },
+      ip: req.ip,
+    });
+
+    res.status(201).json(adjustment);
+  })
+);
+
+router.post(
+  "/adjustments/:id/approve",
+  requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const body = z.object({ approve: z.boolean().optional().default(true) }).parse(req.body);
+    const adj = await prisma.adjustment.findUnique({ where: { id } });
+    if (!adj) throw notFound("Adjustment not found");
+    if (adj.status !== AdjustmentStatus.PENDING) throw badRequest("Adjustment already decided");
+
+    if (body.approve) {
+      await postStockMove({ warehouseId: adj.warehouseId, itemId: adj.itemId, qty: adj.quantity, refType: "ADJUSTMENT", refId: String(adj.id) });
+      await prisma.adjustment.update({ where: { id }, data: { status: AdjustmentStatus.APPROVED, approvedById: req.user!.id } });
+    } else {
+      await prisma.adjustment.update({ where: { id }, data: { status: AdjustmentStatus.REJECTED, approvedById: req.user!.id } });
+    }
+    await audit({ userId: req.user!.id, action: body.approve ? AuditAction.APPROVE : AuditAction.REJECT, entityType: "Adjustment", entityId: String(id), after: { status: body.approve ? AdjustmentStatus.APPROVED : AdjustmentStatus.REJECTED }, ip: req.ip });
+    res.json({ id, status: body.approve ? AdjustmentStatus.APPROVED : AdjustmentStatus.REJECTED });
+  })
+);
 
 router.patch(
   "/adjustments/:id",

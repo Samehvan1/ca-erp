@@ -177,6 +177,16 @@ router.post(
 
 // ============ ADJUSTMENTS ============
 
+const adjustmentCreateSchema = z.object({
+  itemId: z.number().int(),
+  warehouseId: z.number().int(),
+  quantity: z.number(),
+  reason: z.nativeEnum(AdjustmentReason),
+  amount: z.number().optional().default(0),
+  status: z.nativeEnum(AdjustmentStatus).optional().default(AdjustmentStatus.APPROVED),
+  approvalLevel: z.number().int().optional().default(1),
+});
+
 router.get(
   "/adjustments",
   asyncHandler(async (_req, res) => {
@@ -186,17 +196,100 @@ router.get(
 );
 
 router.post(
+  "/adjustments",
+  requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
+  asyncHandler(async (req, res) => {
+    const body = adjustmentCreateSchema.parse(req.body);
+    const item = await prisma.item.findUnique({ where: { id: body.itemId } });
+    if (!item) throw notFound("Item not found");
+    const wh = await prisma.warehouse.findUnique({ where: { id: body.warehouseId } });
+    if (!wh) throw notFound("Warehouse not found");
+
+    const number = `ADJ-${Date.now().toString().slice(-6)}`;
+    const isApproved = body.status === AdjustmentStatus.APPROVED;
+
+    const adjustment = await prisma.adjustment.create({
+      data: {
+        number,
+        itemId: body.itemId,
+        warehouseId: body.warehouseId,
+        quantity: body.quantity,
+        reason: body.reason,
+        amount: body.amount || 0,
+        status: body.status || AdjustmentStatus.APPROVED,
+        approvalLevel: body.approvalLevel || 1,
+        requestedById: req.user!.id,
+        approvedById: isApproved ? req.user!.id : null,
+      },
+      include: { item: true, warehouse: true, requestedBy: true, approvedBy: true },
+    });
+
+    if (isApproved) {
+      await postStockMove({
+        warehouseId: body.warehouseId,
+        itemId: body.itemId,
+        qty: body.quantity,
+        refType: "ADJUSTMENT",
+        refId: number,
+      });
+    }
+
+    await audit({
+      userId: req.user!.id,
+      action: AuditAction.ADJUST,
+      entityType: "Adjustment",
+      entityId: String(adjustment.id),
+      after: { number, itemId: body.itemId, warehouseId: body.warehouseId, quantity: body.quantity, status: adjustment.status },
+      ip: req.ip,
+    });
+
+    res.status(201).json(adjustment);
+  })
+);
+
+router.patch(
+  "/adjustments/:id",
+  requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const body = adjustmentCreateSchema.partial().parse(req.body);
+    const existing = await prisma.adjustment.findUnique({ where: { id } });
+    if (!existing) throw notFound("Adjustment not found");
+    const adjustment = await prisma.adjustment.update({ where: { id }, data: body });
+    await audit({ userId: req.user!.id, action: AuditAction.UPDATE, entityType: "Adjustment", entityId: String(id), before: { status: existing.status }, after: { status: adjustment.status }, ip: req.ip });
+    res.json(adjustment);
+  })
+);
+
+router.delete(
+  "/adjustments/:id",
+  requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const existing = await prisma.adjustment.findUnique({ where: { id } });
+    if (!existing) throw notFound("Adjustment not found");
+    if (existing.status !== AdjustmentStatus.PENDING) throw badRequest("Only pending adjustments can be deleted");
+    try {
+      await prisma.adjustment.delete({ where: { id } });
+    } catch (e) {
+      if (isForeignKeyViolation(e)) throw badRequest("Cannot delete: record is referenced by other records");
+      throw e;
+    }
+    await audit({ userId: req.user!.id, action: AuditAction.DELETE, entityType: "Adjustment", entityId: String(id), before: { status: existing.status }, ip: req.ip });
+    res.json({ ok: true });
+  })
+);
+router.post(
   "/adjustments/:id/approve",
   requireRole(Role.ADMIN, Role.PROJECT_WAREHOUSE_MANAGER, Role.COST_CONTROLLER),
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const body = z.object({ approve: z.boolean() }).parse(req.body);
+    const body = z.object({ approve: z.boolean().optional().default(true) }).parse(req.body);
     const adj = await prisma.adjustment.findUnique({ where: { id } });
     if (!adj) throw notFound("Adjustment not found");
     if (adj.status !== AdjustmentStatus.PENDING) throw badRequest("Adjustment already decided");
 
     if (body.approve) {
-      // Post the stock correction
       await postStockMove({ warehouseId: adj.warehouseId, itemId: adj.itemId, qty: adj.quantity, refType: "ADJUSTMENT", refId: String(adj.id) });
       await prisma.adjustment.update({ where: { id }, data: { status: AdjustmentStatus.APPROVED, approvedById: req.user!.id } });
     } else {

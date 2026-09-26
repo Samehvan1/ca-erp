@@ -1,0 +1,30 @@
+services:
+  ca-erp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ca-erp-app
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:mero1901@host.docker.internal:5432/capital_agro_erp}
+      JWT_SECRET: ${JWT_SECRET:-capital-agro-production-super-secret-jwt-key-2026}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:4000}
+      AUTO_SEED: ${AUTO_SEED:-true}
+      TZ: ${TZ:-Africa/Cairo}
+    ports:
+      - "${PORT:-4000}:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ca_erp_backups:/app/server/backups
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  ca_erp_backups:

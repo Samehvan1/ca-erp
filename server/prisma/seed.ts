@@ -94,6 +94,65 @@ async function main() {
     await prisma.costCenter.upsert({ where: { code: c.code }, update: {}, create: c });
   }
 
+  // ---------- Categories ----------
+  const catData = [
+    { code: "CAT-DAIRY", name: "Dairy & Milk", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+    { code: "CAT-BEV", name: "Coffee & Beverages", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+    { code: "CAT-GRAIN", name: "Bakery & Dry Goods", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+    { code: "CAT-MEAT", name: "Meats & Poultry", defaultValuationMethod: ValuationMethod.FIFO, taxRatePct: 14 },
+    { code: "CAT-SPICE", name: "Spices & Seasonings", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+    { code: "CAT-PACK", name: "Packaging & Disposables", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+    { code: "CAT-CHEM", name: "Cleaning & Chemicals", defaultValuationMethod: ValuationMethod.WAC, taxRatePct: 14 },
+  ];
+  const categories: Record<string, number> = {};
+  for (const c of catData) {
+    const cat = await prisma.category.upsert({ where: { code: c.code }, update: { name: c.name, defaultValuationMethod: c.defaultValuationMethod, taxRatePct: c.taxRatePct }, create: c });
+    categories[c.code] = cat.id;
+  }
+
+  // ---------- Units of Measure ----------
+  const uomData = [
+    { code: "KG", name: "Kilogram", symbol: "kg", dimension: "MASS" as const, isBaseUnit: true },
+    { code: "G", name: "Gram", symbol: "g", dimension: "MASS" as const, isBaseUnit: false },
+    { code: "MG", name: "Milligram", symbol: "mg", dimension: "MASS" as const, isBaseUnit: false },
+    { code: "L", name: "Liter", symbol: "L", dimension: "VOLUME" as const, isBaseUnit: true },
+    { code: "ML", name: "Milliliter", symbol: "ml", dimension: "VOLUME" as const, isBaseUnit: false },
+    { code: "PCS", name: "Pieces / Units", symbol: "pcs", dimension: "COUNT" as const, isBaseUnit: true },
+    { code: "BOX", name: "Box", symbol: "box", dimension: "COUNT" as const, isBaseUnit: false },
+    { code: "PACK", name: "Pack", symbol: "pk", dimension: "COUNT" as const, isBaseUnit: false },
+    { code: "BAG", name: "Bag / Sack", symbol: "bag", dimension: "COUNT" as const, isBaseUnit: false },
+    { code: "CRATE", name: "Crate", symbol: "crate", dimension: "COUNT" as const, isBaseUnit: false },
+    { code: "BOTTLE", name: "Bottle", symbol: "btl", dimension: "COUNT" as const, isBaseUnit: false },
+    { code: "CAN", name: "Can", symbol: "can", dimension: "COUNT" as const, isBaseUnit: false },
+  ];
+  const uoms: Record<string, number> = {};
+  for (const u of uomData) {
+    const uomRec = await prisma.unitOfMeasure.upsert({ where: { code: u.code }, update: { name: u.name, symbol: u.symbol, dimension: u.dimension, isBaseUnit: u.isBaseUnit }, create: u });
+    uoms[u.code] = uomRec.id;
+  }
+
+  // ---------- Standard Dimension Unit Conversions ----------
+  const stdConversions = [
+    { from: "KG", to: "G", factor: 1000 },
+    { from: "G", to: "KG", factor: 0.001 },
+    { from: "G", to: "MG", factor: 1000 },
+    { from: "MG", to: "G", factor: 0.001 },
+    { from: "L", to: "ML", factor: 1000 },
+    { from: "ML", to: "L", factor: 0.001 },
+  ];
+  for (const sc of stdConversions) {
+    const fromId = uoms[sc.from];
+    const toId = uoms[sc.to];
+    if (fromId && toId) {
+      const existing = await prisma.unitConversion.findFirst({ where: { fromUnitId: fromId, toUnitId: toId, itemId: null } });
+      if (!existing) {
+        await prisma.unitConversion.create({ data: { fromUnitId: fromId, toUnitId: toId, factor: sc.factor } });
+      } else {
+        await prisma.unitConversion.update({ where: { id: existing.id }, data: { factor: sc.factor } });
+      }
+    }
+  }
+
   // ---------- Items & Brand Variants ----------
   const itemData = [
     { code: "RM-MLK-01", description: "Full Cream Milk 1L", scope: ItemScope.CROSS_PROJECT, category: "Dairy", valuationMethod: ValuationMethod.WAC, abcClass: "A", uom: "Each", brands: ["Juhayna Full Cream 1L", "Dina-Farms Full Cream 1L", "Lamar Full Cream 1L"] },
@@ -138,24 +197,27 @@ async function main() {
   const coffeeBrands = await prisma.brandVariant.findMany({ where: { itemId: items["SPC-CB-01"] } });
 
   // Generic item level mappings
-  await prisma.vendorItem.createMany({ data: [
-    { vendorId: vendors["V-001"], itemId: items["RM-MLK-01"] },
-    { vendorId: vendors["V-002"], itemId: items["RM-MLK-01"] },
-    { vendorId: vendors["V-003"], itemId: items["RM-SGR-01"] },
-    { vendorId: vendors["V-004"], itemId: items["RM-SGR-01"] },
-    { vendorId: vendors["V-005"], itemId: items["FSH-SPC-09"] },
-    { vendorId: vendors["V-006"], itemId: items["SPC-CB-01"] },
-    { vendorId: vendors["V-007"], itemId: items["OST-CHK-01"] },
-    { vendorId: vendors["V-008"], itemId: items["OST-CHK-01"] },
-  ] });
+  await prisma.vendorItem.createMany({
+    data: [
+      { vendorId: vendors["V-001"], itemId: items["RM-MLK-01"] },
+      { vendorId: vendors["V-002"], itemId: items["RM-MLK-01"] },
+      { vendorId: vendors["V-003"], itemId: items["RM-SGR-01"] },
+      { vendorId: vendors["V-004"], itemId: items["RM-SGR-01"] },
+      { vendorId: vendors["V-005"], itemId: items["FSH-SPC-09"] },
+      { vendorId: vendors["V-006"], itemId: items["SPC-CB-01"] },
+      { vendorId: vendors["V-007"], itemId: items["OST-CHK-01"] },
+      { vendorId: vendors["V-008"], itemId: items["OST-CHK-01"] },
+    ],
+    skipDuplicates: true,
+  });
 
   // Brand variant level mappings (exclusive distributors)
   const dina = milkBrands.find((b) => b.name.includes("Dina"));
   const juhayna = milkBrands.find((b) => b.name.includes("Juhayna"));
   const yirga = coffeeBrands.find((b) => b.name.includes("Yirgacheffe"));
-  if (dina) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-002"], brandVariantId: dina.id, isExclusive: true }] });
-  if (juhayna) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-001"], brandVariantId: juhayna.id, isExclusive: true }] });
-  if (yirga) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-006"], brandVariantId: yirga.id, isExclusive: true }] });
+  if (dina) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-002"], brandVariantId: dina.id, isExclusive: true }], skipDuplicates: true });
+  if (juhayna) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-001"], brandVariantId: juhayna.id, isExclusive: true }], skipDuplicates: true });
+  if (yirga) await prisma.vendorBrandVariant.createMany({ data: [{ vendorId: vendors["V-006"], brandVariantId: yirga.id, isExclusive: true }], skipDuplicates: true });
 
   // ---------- Price Lists ----------
   const now = new Date();
@@ -206,16 +268,22 @@ for (const r of recipeData) {
   const posFsh = await prisma.posTerminal.findUnique({ where: { code: "POS-FSH-01" } });
   const posSpc = await prisma.posTerminal.findUnique({ where: { code: "POS-SPC-01" } });
   if (posFsh) {
-    await prisma.menuMapping.createMany({ data: [
-      { posMenuId: "MENU-GRILL-CHICKEN", terminalId: posFsh.id, itemId: items["OST-CHK-01"] },
-      { posMenuId: "MENU-MILK", terminalId: posFsh.id, itemId: items["RM-MLK-01"] },
-    ] });
+    await prisma.menuMapping.createMany({
+      data: [
+        { posMenuId: "MENU-GRILL-CHICKEN", terminalId: posFsh.id, itemId: items["OST-CHK-01"] },
+        { posMenuId: "MENU-MILK", terminalId: posFsh.id, itemId: items["RM-MLK-01"] },
+      ],
+      skipDuplicates: true,
+    });
   }
   if (posSpc) {
-    await prisma.menuMapping.createMany({ data: [
-      { posMenuId: "MENU-CAPPUCCINO", terminalId: posSpc.id, itemId: items["SPC-CB-01"] },
-      { posMenuId: "MENU-MILK", terminalId: posSpc.id, itemId: items["RM-MLK-01"] },
-    ] });
+    await prisma.menuMapping.createMany({
+      data: [
+        { posMenuId: "MENU-CAPPUCCINO", terminalId: posSpc.id, itemId: items["SPC-CB-01"] },
+        { posMenuId: "MENU-MILK", terminalId: posSpc.id, itemId: items["RM-MLK-01"] },
+      ],
+      skipDuplicates: true,
+    });
   }
 
   // ---------- Report Definitions ----------
@@ -233,26 +301,32 @@ for (const r of recipeData) {
   }
 
   // ---------- Initial stock batches ----------
-  const batchData = [
-    { itemId: items["RM-MLK-01"], brandVariantId: milkBrands[0]?.id, batchNo: "B-MLK-001", expiryDate: new Date(now.getTime() + 20 * 24 * 3600 * 1000), quantity: 120, warehouseId: warehouses["PCW-FSH"] },
-    { itemId: items["RM-MLK-01"], brandVariantId: milkBrands[1]?.id, batchNo: "B-MLK-002", expiryDate: new Date(now.getTime() + 45 * 24 * 3600 * 1000), quantity: 80, warehouseId: warehouses["PCW-FSH"] },
-    { itemId: items["RM-SGR-01"], brandVariantId: sugarBrands[0]?.id, batchNo: "B-SGR-001", expiryDate: new Date(now.getTime() + 300 * 24 * 3600 * 1000), quantity: 40, warehouseId: warehouses["GCW-01"] },
-    { itemId: items["SPC-CB-01"], brandVariantId: coffeeBrands[0]?.id, batchNo: "B-CB-001", expiryDate: new Date(now.getTime() + 180 * 24 * 3600 * 1000), quantity: 60, warehouseId: warehouses["PCW-SPC"] },
-    { itemId: items["OST-CHK-01"], brandVariantId: chickenBrands[0]?.id, batchNo: "B-CHK-001", expiryDate: new Date(now.getTime() + 5 * 24 * 3600 * 1000), quantity: 200, warehouseId: warehouses["PCW-OST"] },
-  ];
-  for (const b of batchData) {
-    const batch = await prisma.batch.create({ data: b });
-    await prisma.stockLedger.create({
-      data: { warehouseId: b.warehouseId, itemId: b.itemId, brandVariantId: b.brandVariantId, batchId: batch.id, qtyIn: b.quantity, balance: b.quantity, unitCost: 40, refType: "SEED" },
-    });
+  const batchCount = await prisma.batch.count();
+  if (batchCount === 0) {
+    const batchData = [
+      { itemId: items["RM-MLK-01"], brandVariantId: milkBrands[0]?.id, batchNo: "B-MLK-001", expiryDate: new Date(now.getTime() + 20 * 24 * 3600 * 1000), quantity: 120, warehouseId: warehouses["PCW-FSH"] },
+      { itemId: items["RM-MLK-01"], brandVariantId: milkBrands[1]?.id, batchNo: "B-MLK-002", expiryDate: new Date(now.getTime() + 45 * 24 * 3600 * 1000), quantity: 80, warehouseId: warehouses["PCW-FSH"] },
+      { itemId: items["RM-SGR-01"], brandVariantId: sugarBrands[0]?.id, batchNo: "B-SGR-001", expiryDate: new Date(now.getTime() + 300 * 24 * 3600 * 1000), quantity: 40, warehouseId: warehouses["GCW-01"] },
+      { itemId: items["SPC-CB-01"], brandVariantId: coffeeBrands[0]?.id, batchNo: "B-CB-001", expiryDate: new Date(now.getTime() + 180 * 24 * 3600 * 1000), quantity: 60, warehouseId: warehouses["PCW-SPC"] },
+      { itemId: items["OST-CHK-01"], brandVariantId: chickenBrands[0]?.id, batchNo: "B-CHK-001", expiryDate: new Date(now.getTime() + 5 * 24 * 3600 * 1000), quantity: 200, warehouseId: warehouses["PCW-OST"] },
+    ];
+    for (const b of batchData) {
+      const batch = await prisma.batch.create({ data: b });
+      await prisma.stockLedger.create({
+        data: { warehouseId: b.warehouseId, itemId: b.itemId, brandVariantId: b.brandVariantId, batchId: batch.id, qtyIn: b.quantity, balance: b.quantity, unitCost: 40, refType: "SEED" },
+      });
+    }
   }
 
   // ---------- Reorder points ----------
-  await prisma.reorderPoint.createMany({ data: [
-    { itemId: items["RM-MLK-01"], warehouseId: warehouses["PCW-FSH"], safetyStock: 30, reorderPoint: 60, leadTimeDays: 3, consumptionVelocity: 20 },
-    { itemId: items["OST-CHK-01"], warehouseId: warehouses["PCW-OST"], safetyStock: 50, reorderPoint: 100, leadTimeDays: 2, consumptionVelocity: 40 },
-    { itemId: items["SPC-CB-01"], warehouseId: warehouses["PCW-SPC"], safetyStock: 20, reorderPoint: 40, leadTimeDays: 14, consumptionVelocity: 5 },
-  ] });
+  await prisma.reorderPoint.createMany({
+    data: [
+      { itemId: items["RM-MLK-01"], warehouseId: warehouses["PCW-FSH"], safetyStock: 30, reorderPoint: 60, leadTimeDays: 3, consumptionVelocity: 20 },
+      { itemId: items["OST-CHK-01"], warehouseId: warehouses["PCW-OST"], safetyStock: 50, reorderPoint: 100, leadTimeDays: 2, consumptionVelocity: 40 },
+      { itemId: items["SPC-CB-01"], warehouseId: warehouses["PCW-SPC"], safetyStock: 20, reorderPoint: 40, leadTimeDays: 14, consumptionVelocity: 5 },
+    ],
+    skipDuplicates: true,
+  });
 
   console.log("Seed complete.");
   console.log("Login: admin@capitalagro.com / Admin@123");

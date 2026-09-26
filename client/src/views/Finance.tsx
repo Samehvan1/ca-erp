@@ -251,19 +251,39 @@ export default function Finance() {
       </div>
 
       <div className="tabs">
-        <button className={tab === "trial" ? "active" : ""} onClick={() => setTab("trial")}>
+        <button
+          className={tab === "trial" ? "active" : ""}
+          onClick={() => setTab("trial")}
+          title="Trial balance: Overview of debits, credits, and closing balances for all active General Ledger accounts"
+        >
           Trial balance
         </button>
-        <button className={tab === "postings" ? "active" : ""} onClick={() => setTab("postings")}>
+        <button
+          className={tab === "postings" ? "active" : ""}
+          onClick={() => setTab("postings")}
+          title="GL postings: Double-entry journal entries generated from inventory movements, invoices, and manual vouchers"
+        >
           GL postings ({postings.data?.length ?? 0})
         </button>
-        <button className={tab === "ap" ? "active" : ""} onClick={() => setTab("ap")}>
+        <button
+          className={tab === "ap" ? "active" : ""}
+          onClick={() => setTab("ap")}
+          title="AP ledger: Accounts Payable subledger detailing outstanding vendor balances, invoices, and scheduled payments"
+        >
           AP ledger ({ap.data?.length ?? 0})
         </button>
-        <button className={tab === "accounts" ? "active" : ""} onClick={() => setTab("accounts")}>
+        <button
+          className={tab === "accounts" ? "active" : ""}
+          onClick={() => setTab("accounts")}
+          title="Accounts: Chart of Accounts structure, financial classification codes, and reporting parents"
+        >
           Accounts ({accounts.data?.length ?? 0})
         </button>
-        <button className={tab === "costCenters" ? "active" : ""} onClick={() => setTab("costCenters")}>
+        <button
+          className={tab === "costCenters" ? "active" : ""}
+          onClick={() => setTab("costCenters")}
+          title="Cost centers: Business units, departments, and store locations for departmental expense allocation"
+        >
           Cost centers ({costCenters.data?.length ?? 0})
         </button>
       </div>

@@ -46,6 +46,11 @@ export async function api<T = unknown>(path: string, options: RequestInit = {}):
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (res.status === 401) {
+    clearSession();
+    window.dispatchEvent(new Event("ca_unauthorized"));
+    throw new ApiError(401, "Session expired. Please sign in again.");
+  }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {

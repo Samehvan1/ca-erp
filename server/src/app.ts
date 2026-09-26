@@ -16,11 +16,19 @@ import stocktakingRoutes from "./modules/stocktaking/routes.js";
 import financeRoutes from "./modules/finance/routes.js";
 import analyticsRoutes from "./modules/analytics/routes.js";
 import dashboardRoutes from "./modules/dashboard/routes.js";
+import masterDataRoutes from "./modules/master-data/routes.js";
+
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function createApp() {
   const app = express();
 
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
   app.use(morgan("dev"));
@@ -47,6 +55,25 @@ export function createApp() {
   app.use("/api/v1/finance", financeRoutes);
   app.use("/api/v1/analytics", analyticsRoutes);
   app.use("/api/v1/dashboard", dashboardRoutes);
+  app.use("/api/v1/master-data", masterDataRoutes);
+
+  // Serve static client assets in production if available
+  const clientDistCandidates = [
+    process.env.CLIENT_DIST_PATH,
+    path.resolve(process.cwd(), "client/dist"),
+    path.resolve(process.cwd(), "../client/dist"),
+    path.resolve(__dirname, "../../client/dist"),
+    path.resolve(__dirname, "../client/dist"),
+  ].filter(Boolean) as string[];
+
+  const resolvedClientDist = clientDistCandidates.find((p) => fs.existsSync(p) && fs.existsSync(path.join(p, "index.html")));
+  if (resolvedClientDist) {
+    app.use(express.static(resolvedClientDist));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path === "/health") return next();
+      res.sendFile(path.join(resolvedClientDist, "index.html"));
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);

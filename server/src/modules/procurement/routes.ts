@@ -57,9 +57,25 @@ router.post(
         costCenterId: body.costCenterId ?? null,
         items: { create: body.items.map((i) => ({ itemId: i.itemId, brandVariantId: i.brandVariantId ?? null, quantity: i.quantity, unitPrice: i.unitPrice ?? 0 })) },
       },
-      include: { items: true },
+      include: { items: { include: { item: true } }, project: true, costCenter: true },
     });
-    await audit({ userId: req.user!.id, action: AuditAction.CREATE, entityType: "Requisition", entityId: String(requisition.id), after: { number: requisition.number, totalValue }, ip: req.ip });
+    await audit({
+      userId: req.user!.id,
+      action: AuditAction.CREATE,
+      entityType: "Requisition",
+      entityId: String(requisition.id),
+      after: {
+        number: requisition.number,
+        status: requisition.status,
+        type: requisition.type,
+        project: requisition.project?.name ?? String(requisition.projectId),
+        costCenter: requisition.costCenter?.name ?? "None",
+        totalValue: `${requisition.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })} EGP`,
+        itemsCount: requisition.items.length,
+        itemsSummary: requisition.items.map((i) => `${i.quantity}x ${i.item.description || i.item.code}${i.unitPrice ? ` @ ${i.unitPrice} EGP` : ""}`).join(", "),
+      },
+      ip: req.ip,
+    });
     res.status(201).json(requisition);
   })
 );
@@ -70,18 +86,48 @@ router.patch(
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
     const body = requisitionSchema.partial().parse(req.body);
-    const existing = await prisma.requisition.findUnique({ where: { id } });
+    const existing = await prisma.requisition.findUnique({
+      where: { id },
+      include: { items: { include: { item: true } }, project: true, costCenter: true },
+    });
     if (!existing) throw notFound("Requisition not found");
     const { items, ...scalars } = body;
+    const totalValue = items ? items.reduce((s, i) => s + i.quantity * (i.unitPrice ?? 0), 0) : existing.totalValue;
     const updated = await prisma.requisition.update({
       where: { id },
       data: {
         ...scalars,
-        ...(items ? { items: { deleteMany: {}, create: items.map((i) => ({ itemId: i.itemId, brandVariantId: i.brandVariantId ?? null, quantity: i.quantity, unitPrice: i.unitPrice ?? 0 })) } } : {}),
+        ...(items ? { totalValue, items: { deleteMany: {}, create: items.map((i) => ({ itemId: i.itemId, brandVariantId: i.brandVariantId ?? null, quantity: i.quantity, unitPrice: i.unitPrice ?? 0 })) } } : {}),
       },
-      include: { items: true },
+      include: { items: { include: { item: true } }, project: true, costCenter: true },
     });
-    await audit({ userId: req.user!.id, action: AuditAction.UPDATE, entityType: "Requisition", entityId: String(id), before: { number: existing.number, status: existing.status, totalValue: existing.totalValue }, after: { number: updated.number, status: updated.status, totalValue: updated.totalValue }, ip: req.ip });
+    await audit({
+      userId: req.user!.id,
+      action: AuditAction.UPDATE,
+      entityType: "Requisition",
+      entityId: String(id),
+      before: {
+        number: existing.number,
+        status: existing.status,
+        type: existing.type,
+        project: existing.project?.name ?? String(existing.projectId),
+        costCenter: existing.costCenter?.name ?? "None",
+        totalValue: `${existing.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })} EGP`,
+        itemsCount: existing.items.length,
+        itemsSummary: existing.items.map((i) => `${i.quantity}x ${i.item.description || i.item.code}${i.unitPrice ? ` @ ${i.unitPrice} EGP` : ""}`).join(", "),
+      },
+      after: {
+        number: updated.number,
+        status: updated.status,
+        type: updated.type,
+        project: updated.project?.name ?? String(updated.projectId),
+        costCenter: updated.costCenter?.name ?? "None",
+        totalValue: `${updated.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })} EGP`,
+        itemsCount: updated.items.length,
+        itemsSummary: updated.items.map((i) => `${i.quantity}x ${i.item.description || i.item.code}${i.unitPrice ? ` @ ${i.unitPrice} EGP` : ""}`).join(", "),
+      },
+      ip: req.ip,
+    });
     res.json(updated);
   })
 );
@@ -189,7 +235,7 @@ router.post(
   requireRole(Role.ADMIN, Role.GROUP_EXECUTIVE, Role.CFO, Role.PROCUREMENT_OFFICER, Role.PROJECT_WAREHOUSE_MANAGER),
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const body = z.object({ approve: z.boolean(), comment: z.string().optional() }).parse(req.body);
+    const body = z.object({ approve: z.boolean().default(true), comment: z.string().optional() }).parse(req.body ?? {});
     const requisition = await prisma.requisition.findUnique({ where: { id }, include: { items: true } });
     if (!requisition) throw notFound("Requisition not found");
     if (requisition.status !== RequisitionStatus.PENDING_APPROVAL) throw badRequest("Requisition is not pending approval");

@@ -47,21 +47,48 @@ export default function Dashboard({ user }: { user: User }) {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const h = { Authorization: `Bearer ${localStorage.getItem("ca_token")}` };
+    const token = localStorage.getItem("ca_token");
+    if (!token) {
+      window.dispatchEvent(new Event("ca_unauthorized"));
+      return;
+    }
+    const h = { Authorization: `Bearer ${token}` };
     Promise.all([
-      fetch("/api/v1/dashboard/summary", { headers: h }).then((r) => r.json()),
-      fetch("/api/v1/transfers/orders/aging", { headers: h }).then((r) => r.json()),
-      fetch("/api/v1/security/audit?limit=8", { headers: h }).then((r) => r.json()),
+      fetch("/api/v1/dashboard/summary", { headers: h }).then((r) => {
+        if (r.status === 401) {
+          window.dispatchEvent(new Event("ca_unauthorized"));
+          throw new Error("Unauthorized");
+        }
+        return r.ok ? r.json() : null;
+      }),
+      fetch("/api/v1/transfers/orders/aging", { headers: h }).then((r) => {
+        if (r.status === 401) {
+          window.dispatchEvent(new Event("ca_unauthorized"));
+          throw new Error("Unauthorized");
+        }
+        return r.ok ? r.json() : [];
+      }),
+      fetch("/api/v1/security/audit?limit=8", { headers: h }).then((r) => {
+        if (r.status === 401) {
+          window.dispatchEvent(new Event("ca_unauthorized"));
+          throw new Error("Unauthorized");
+        }
+        return r.ok ? r.json() : [];
+      }),
     ])
       .then(([s, a, au]) => {
-        setSummary(s);
-        setAging(a);
-        setAudit(Array.isArray(au) ? au : au?.entries ?? []);
+        setSummary(s && typeof s === "object" && !s.error ? s : null);
+        setAging(Array.isArray(a) ? a : []);
+        setAudit(Array.isArray(au) ? au : Array.isArray(au?.entries) ? au.entries : []);
       })
-      .catch((e) => setErr(e.message));
+      .catch((e) => {
+        if (e.message !== "Unauthorized") {
+          setErr(e.message);
+        }
+      });
   }, []);
 
-  const stale = (aging ?? []).filter((a) => a.stale).length;
+  const stale = Array.isArray(aging) ? aging.filter((a) => a.stale).length : 0;
 
   const kpis: { label: string; value: string; hint: string; cls?: string }[] = [
     { label: "Stock value", value: summary ? money(summary.stockValue) : "…", hint: "at weighted avg cost" },

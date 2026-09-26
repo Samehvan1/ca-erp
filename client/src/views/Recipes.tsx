@@ -50,6 +50,7 @@ interface Item {
   id: number;
   code: string;
   description: string;
+  uom?: string;
   brandVariants: { id: number; name: string; sku: string }[];
 }
 
@@ -294,16 +295,32 @@ export default function Recipes() {
       </div>
 
       <div className="tabs">
-        <button className={tab === "recipes" ? "active" : ""} onClick={() => setTab("recipes")}>
+        <button
+          className={tab === "recipes" ? "active" : ""}
+          onClick={() => setTab("recipes")}
+          title="Recipes (BOM): Bill of Materials formulas, portion sizes, preparation costs, and theoretical recipe yield"
+        >
           Recipes ({recipes.data?.length ?? 0})
         </button>
-        <button className={tab === "waste" ? "active" : ""} onClick={() => setTab("waste")}>
+        <button
+          className={tab === "waste" ? "active" : ""}
+          onClick={() => setTab("waste")}
+          title="Waste Logs: Kitchen prep loss, expiration discards, and spoiled raw ingredient logging"
+        >
           Waste ({waste.data?.length ?? 0})
         </button>
-        <button className={tab === "variances" ? "active" : ""} onClick={() => setTab("variances")}>
+        <button
+          className={tab === "variances" ? "active" : ""}
+          onClick={() => setTab("variances")}
+          title="Variances: Discrepancies between theoretical consumption based on sales vs actual physical inventory drawdown"
+        >
           Variances ({variances.data?.length ?? 0})
         </button>
-        <button className={tab === "mappings" ? "active" : ""} onClick={() => setTab("mappings")}>
+        <button
+          className={tab === "mappings" ? "active" : ""}
+          onClick={() => setTab("mappings")}
+          title="Menu Mappings: Mapping POS sellable menu items and modifiers to recipe BOMs for automated ingredient depletion"
+        >
           Menu Mappings ({mappings.data?.length ?? 0})
         </button>
       </div>
@@ -628,55 +645,132 @@ export default function Recipes() {
                 </select>
               </div>
             </div>
-            <div className="sub-head">
-              <strong>Items</strong>
-            </div>
-            {recipeItems.map((row, i) => (
-              <div className="form-row" key={i}>
-                <div className="field">
-                  <label>Item</label>
-                  <select value={row.itemId} onChange={(e) => updateRecipeRow(i, "itemId", e.target.value)} required>
-                    <option value="">Select item…</option>
-                    {(items.data ?? []).map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.code} · {it.description}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Qty</label>
-                  <input type="number" min="0.01" step="0.01" value={row.quantity} onChange={(e) => updateRecipeRow(i, "quantity", e.target.value)} required />
-                </div>
-                <div className="field">
-                  <label>Brand Variant</label>
-                  <select value={row.brandVariantId} onChange={(e) => updateRecipeRow(i, "brandVariantId", e.target.value)}>
-                    <option value="">None</option>
-                    {(items.data ?? [])
-                      .flatMap((it) => it.brandVariants.map((v) => ({ ...v, itemCode: it.code })))
-                      .map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.itemCode} · {v.name} ({v.sku})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Yield</label>
-                  <input type="number" min="0.01" step="0.01" value={row.yieldFactor} onChange={(e) => updateRecipeRow(i, "yieldFactor", e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>Shrink %</label>
-                  <input type="number" min="0" step="0.01" value={row.shrinkagePct} onChange={(e) => updateRecipeRow(i, "shrinkagePct", e.target.value)} />
-                </div>
-                <button type="button" className="btn ghost sm" onClick={() => removeRecipeRow(i)}>
-                  Remove
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <label style={{ fontWeight: 700, fontSize: 13, color: "var(--ink)" }}>Recipe Ingredients ({recipeItems.length})</label>
+                <button type="button" className="btn ghost sm" onClick={addRecipeRow}>
+                  + Add Ingredient
                 </button>
               </div>
-            ))}
-            <button type="button" className="btn ghost sm" onClick={addRecipeRow}>
-              + Add item
-            </button>
+
+              {/* Table Headers */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2.5fr 1fr 1.5fr 1fr 1fr 34px",
+                  gap: 8,
+                  padding: "6px 10px",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "var(--muted)",
+                  background: "var(--paper-2)",
+                  borderRadius: "6px 6px 0 0",
+                  border: "1px solid var(--line)",
+                  borderBottom: "none",
+                }}
+              >
+                <div>Item / Ingredient *</div>
+                <div style={{ textAlign: "right" }}>Qty *</div>
+                <div>Brand Variant</div>
+                <div style={{ textAlign: "right" }}>Yield Factor</div>
+                <div style={{ textAlign: "right" }}>Shrink %</div>
+                <div></div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--line)", borderRadius: "0 0 6px 6px", background: "var(--card)", overflow: "hidden" }}>
+                {recipeItems.map((row, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2.5fr 1fr 1.5fr 1fr 1fr 34px",
+                      gap: 8,
+                      alignItems: "center",
+                      padding: "8px 10px",
+                      borderBottom: i === recipeItems.length - 1 ? "none" : "1px solid var(--line)",
+                      background: i % 2 === 0 ? "var(--card)" : "rgba(246, 241, 230, 0.4)",
+                    }}
+                  >
+                    <div>
+                      <select value={row.itemId} onChange={(e) => updateRecipeRow(i, "itemId", e.target.value)} required style={{ width: "100%", padding: "5px 6px", fontSize: 12.5 }}>
+                        <option value="">Select item…</option>
+                        {(items.data ?? []).map((it) => (
+                          <option key={it.id} value={it.id}>
+                            {it.code} · {it.description} ({it.uom})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <input
+                        type="number"
+                        min="0.0001"
+                        step="0.01"
+                        placeholder="Qty"
+                        value={row.quantity}
+                        onChange={(e) => updateRecipeRow(i, "quantity", e.target.value)}
+                        required
+                        style={{ width: "100%", padding: "5px 6px", textAlign: "right", fontSize: 12.5 }}
+                      />
+                    </div>
+
+                    <div>
+                      <select value={row.brandVariantId} onChange={(e) => updateRecipeRow(i, "brandVariantId", e.target.value)} style={{ width: "100%", padding: "5px 6px", fontSize: 12 }}>
+                        <option value="">Generic (All)</option>
+                        {(items.data ?? [])
+                          .flatMap((it) => it.brandVariants.map((v) => ({ ...v, itemCode: it.code })))
+                          .map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.itemCode} · {v.name} ({v.sku})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="1.0"
+                        value={row.yieldFactor}
+                        onChange={(e) => updateRecipeRow(i, "yieldFactor", e.target.value)}
+                        style={{ width: "100%", padding: "5px 6px", textAlign: "right", fontSize: 12.5 }}
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="0"
+                        value={row.shrinkagePct}
+                        onChange={(e) => updateRecipeRow(i, "shrinkagePct", e.target.value)}
+                        style={{ width: "100%", padding: "5px 6px", textAlign: "right", fontSize: 12.5 }}
+                      />
+                    </div>
+
+                    <div style={{ textAlign: "center" }}>
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        style={{ color: "var(--danger)", padding: "2px 6px", minWidth: 24 }}
+                        onClick={() => removeRecipeRow(i)}
+                        disabled={recipeItems.length === 1}
+                        title="Remove Ingredient"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="modal-actions">
               <div className="spacer" />
               <button type="button" className="btn ghost" onClick={() => { setShowRecipe(false); setEditRecipe(null); }}>

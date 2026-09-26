@@ -247,13 +247,25 @@ export default function Suppliers() {
       </div>
 
       <div className="tabs">
-        <button className={tab === "vendors" ? "active" : ""} onClick={() => setTab("vendors")}>
+        <button
+          className={tab === "vendors" ? "active" : ""}
+          onClick={() => setTab("vendors")}
+          title="Vendors: Supplier master records, tax & commercial registration, contact persons, and bank details"
+        >
           Vendors ({vendors.data?.length ?? 0})
         </button>
-        <button className={tab === "prices" ? "active" : ""} onClick={() => setTab("prices")}>
+        <button
+          className={tab === "prices" ? "active" : ""}
+          onClick={() => setTab("prices")}
+          title="Price lists: Vendor price agreements, unit rates, minimum order quantities (MOQ), and contract validity periods"
+        >
           Price lists ({prices.data?.length ?? 0})
         </button>
-        <button className={tab === "slas" ? "active" : ""} onClick={() => setTab("slas")}>
+        <button
+          className={tab === "slas" ? "active" : ""}
+          onClick={() => setTab("slas")}
+          title="SLA scorecards: Supplier delivery reliability, lead time compliance, fulfillment rates, and quality scorecards"
+        >
           SLA scorecards ({slas.data?.length ?? 0})
         </button>
       </div>

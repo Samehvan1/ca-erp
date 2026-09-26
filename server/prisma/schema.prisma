@@ -37,6 +37,14 @@ enum ValuationMethod {
   FIFO
 }
 
+enum UnitDimension {
+  MASS
+  VOLUME
+  COUNT
+  LENGTH
+  AREA
+}
+
 enum Role {
   ADMIN
   GROUP_EXECUTIVE
@@ -566,7 +574,53 @@ model LandedCost {
   allocatedAmount Float  @default(0)
 }
 
-// ============ INVENTORY (Module 3) ============
+// ============ MASTER DATA & INVENTORY (Module 3) ============
+
+model Category {
+  id                     Int              @id @default(autoincrement())
+  code                   String           @unique
+  name                   String
+  parentId               Int?
+  parent                 Category?        @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children               Category[]       @relation("CategoryHierarchy")
+  defaultValuationMethod ValuationMethod? @default(WAC)
+  inventoryAccountId     Int?
+  inventoryAccount       GlAccount?       @relation("CategoryInventoryAccount", fields: [inventoryAccountId], references: [id])
+  cogsAccountId          Int?
+  cogsAccount            GlAccount?       @relation("CategoryCogsAccount", fields: [cogsAccountId], references: [id])
+  taxRatePct             Float            @default(0)
+  items                  Item[]
+  createdAt              DateTime         @default(now())
+}
+
+model UnitOfMeasure {
+  id              Int              @id @default(autoincrement())
+  code            String           @unique
+  name            String
+  symbol          String?
+  dimension       UnitDimension
+  isBaseUnit      Boolean          @default(false)
+  fromConversions UnitConversion[] @relation("FromUnit")
+  toConversions   UnitConversion[] @relation("ToUnit")
+  baseItems       Item[]           @relation("BaseUnit")
+  purchaseItems   Item[]           @relation("PurchaseUnit")
+  recipeItems     Item[]           @relation("RecipeUnit")
+  createdAt       DateTime         @default(now())
+}
+
+model UnitConversion {
+  id         Int           @id @default(autoincrement())
+  fromUnitId Int
+  fromUnit   UnitOfMeasure @relation("FromUnit", fields: [fromUnitId], references: [id])
+  toUnitId   Int
+  toUnit     UnitOfMeasure @relation("ToUnit", fields: [toUnitId], references: [id])
+  factor     Float
+  itemId     Int?
+  item       Item?         @relation(fields: [itemId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@unique([fromUnitId, toUnitId, itemId])
+}
 
 model Item {
   id             Int             @id @default(autoincrement())
@@ -576,9 +630,18 @@ model Item {
   projectId      Int?
   project        Project?        @relation(fields: [projectId], references: [id])
   category       String?
+  categoryId     Int?
+  categoryRef    Category?       @relation(fields: [categoryId], references: [id])
   valuationMethod ValuationMethod @default(WAC)
   abcClass       String?         // A | B | C
   uom            String          @default("Each")
+  baseUnitId     Int?
+  baseUnit       UnitOfMeasure?  @relation("BaseUnit", fields: [baseUnitId], references: [id])
+  purchaseUnitId Int?
+  purchaseUnit   UnitOfMeasure?  @relation("PurchaseUnit", fields: [purchaseUnitId], references: [id])
+  recipeUnitId   Int?
+  recipeUnit     UnitOfMeasure?  @relation("RecipeUnit", fields: [recipeUnitId], references: [id])
+  unitConversions UnitConversion[]
   active         Boolean         @default(true)
   brandVariants  BrandVariant[]
   batches        Batch[]
@@ -903,6 +966,8 @@ model GlAccount {
   name String
   type GlAccountType
   entries GlEntry[]
+  inventoryCategories Category[] @relation("CategoryInventoryAccount")
+  cogsCategories      Category[] @relation("CategoryCogsAccount")
 }
 
 model CostCenter {

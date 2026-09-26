@@ -180,13 +180,25 @@ export default function Reports() {
       </div>
 
       <div className="tabs">
-        <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")}>
+        <button
+          className={tab === "reports" ? "active" : ""}
+          onClick={() => setTab("reports")}
+          title="Reports: Prebuilt enterprise reports covering stock valuation, FEFO expiry aging, spend analytics, and profit margins"
+        >
           Reports
         </button>
-        <button className={tab === "snapshots" ? "active" : ""} onClick={() => setTab("snapshots")}>
+        <button
+          className={tab === "snapshots" ? "active" : ""}
+          onClick={() => setTab("snapshots")}
+          title="Snapshots: Point-in-time exported report runs with immutable parameter records and historical JSON data"
+        >
           Snapshots ({snapshots.data?.length ?? 0})
         </button>
-        <button className={tab === "schedules" ? "active" : ""} onClick={() => setTab("schedules")}>
+        <button
+          className={tab === "schedules" ? "active" : ""}
+          onClick={() => setTab("schedules")}
+          title="Schedules: Automated cron schedules for periodic report generation and recipient email notifications"
+        >
           Schedules ({schedules.data?.length ?? 0})
         </button>
       </div>
