@@ -19,25 +19,26 @@ This guide provides step-by-step instructions to host and run **Capital Agro Hol
 ## ⚡ Option 1: 1-Click Automated Deployment (Recommended)
 
 The automated script [`deploy.sh`](file:///d:/MyWorks/SpaccaTests/TestApps/CA_ERP/deploy.sh) handles everything automatically:
-1. Detects the running `spacca-db` container.
-2. Creates the `capital_agro_erp` database inside PostgreSQL if it does not already exist.
-3. Generates the production `.env` configuration.
-4. Builds the optimized Docker image.
-5. Starts the service with automatic database migrations and initial seeding.
-6. Runs a health check to verify uptime.
+1. **Auto Git Pull**: Automatically pulls the latest commits from the repository.
+2. **PostgreSQL Setup**: Detects `spacca-db` and creates the `capital_agro_erp` database if not present.
+3. **Automated Package Installation**: Runs inside the Docker builder stage, installing all backend & frontend dependencies (`npm ci`), generating Prisma clients, and compiling the production bundle.
+4. **Environment Configuration**: Generates production `.env` with a secure JWT key.
+5. **Database Migration & Seeding**: Runs `prisma db push` and seeds initial accounts on container start.
+6. **Health Check**: Verifies HTTP 200 response on `http://localhost:4000/health`.
 
 ### Run on your VPS:
 
 ```bash
-# 1. Navigate to the project directory on your VPS
-cd /path/to/CA_ERP
+# Clone the repository (if not already cloned)
+git clone https://github.com/Samehvan1/ca-erp.git
+cd ca-erp
 
-# 2. Make the deployment script executable
+# Make executable & run
 chmod +x deploy.sh docker-entrypoint.sh
-
-# 3. Run the automated deployment
 ./deploy.sh
 ```
+
+> **Note on Updates**: To update the system anytime in the future, simply run `./deploy.sh` again. It will auto-pull the latest changes from GitHub, rebuild the containers, and re-sync the database.
 
 ---
 

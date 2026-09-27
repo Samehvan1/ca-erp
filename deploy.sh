@@ -15,8 +15,22 @@ echo -e "${CYAN}================================================================
 echo -e "${CYAN}      🌾 CAPITAL AGRO ERP - AUTOMATED VPS DEPLOYMENT SYSTEM 🌾     ${NC}"
 echo -e "${CYAN}===================================================================${NC}"
 
-# 1. Check prerequisites
-echo -e "\n${BLUE}[1/5] Checking environment and dependencies...${NC}"
+# 1. Check prerequisites & auto-pull latest repository updates
+echo -e "\n${BLUE}[1/6] Checking repository & pulling latest updates...${NC}"
+if [ -d .git ]; then
+  if command -v git &> /dev/null; then
+    echo -e "${YELLOW}🔄 Git repository detected. Pulling latest code from origin...${NC}"
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+    git pull origin "$CURRENT_BRANCH" || echo -e "${YELLOW}⚠️ Notice: git pull encountered an issue or branch is already up-to-date. Proceeding...${NC}"
+    echo -e "${GREEN}✅ Repository is up to date (Branch: $CURRENT_BRANCH).${NC}"
+  else
+    echo -e "${YELLOW}ℹ️ Git not installed on host. Skipping git pull.${NC}"
+  fi
+else
+  echo -e "${YELLOW}ℹ️ Not a git directory. Using existing files.${NC}"
+fi
+
+echo -e "\n${BLUE}[2/6] Checking Docker environment...${NC}"
 if ! command -v docker &> /dev/null; then
   echo -e "${RED}❌ Docker is not installed. Please install Docker first.${NC}"
   exit 1
@@ -33,8 +47,8 @@ if ! docker compose version &> /dev/null; then
 fi
 echo -e "${GREEN}✅ Docker & Docker Compose detected ($COMPOSE_CMD).${NC}"
 
-# 2. Database provisioning
-echo -e "\n${BLUE}[2/5] Checking PostgreSQL Database on VPS (SpaccaPos db)...${NC}"
+# 3. Database provisioning
+echo -e "\n${BLUE}[3/6] Checking PostgreSQL Database on VPS (SpaccaPos db)...${NC}"
 DB_USER="postgres"
 DB_PASS="mero1901"
 DB_NAME="capital_agro_erp"
@@ -68,8 +82,8 @@ else
   fi
 fi
 
-# 3. Prepare Environment Configuration (.env)
-echo -e "\n${BLUE}[3/5] Setting up environment variables...${NC}"
+# 4. Prepare Environment Configuration (.env)
+echo -e "\n${BLUE}[4/6] Setting up environment variables...${NC}"
 if [ ! -f .env ]; then
   echo -e "${YELLOW}📝 Creating production .env file...${NC}"
   cat <<EOF > .env
@@ -86,14 +100,17 @@ else
   echo -e "${GREEN}✅ Existing .env file found.${NC}"
 fi
 
-# 4. Build and Start Container
-echo -e "\n${BLUE}[4/5] Building and launching Capital Agro ERP container...${NC}"
+# 5. Build and Start Container
+echo -e "\n${BLUE}[5/6] Installing packages, compiling bundles & launching container...${NC}"
+echo -e "${CYAN}   -> Installing npm packages (server + client) inside builder stage...${NC}"
+echo -e "${CYAN}   -> Generating Prisma ORM client & compiling TypeScript...${NC}"
+echo -e "${CYAN}   -> Building production Vite frontend bundle...${NC}"
 $COMPOSE_CMD down --remove-orphans || true
 $COMPOSE_CMD build --no-cache
 $COMPOSE_CMD up -d
 
-# 5. Verify Health Check
-echo -e "\n${BLUE}[5/5] Verifying deployment health...${NC}"
+# 6. Verify Health Check
+echo -e "\n${BLUE}[6/6] Verifying deployment health & auto-seeding...${NC}"
 echo -e "⏳ Waiting for ERP services to initialize (Prisma push & seeding)..."
 
 HEALTHY=0
