@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Badge, ConfirmDialog, Empty, ErrorBanner, HistoryButton, ListToolbar, Loading, Modal, Toast, apiReq, useApi, useListFilter } from "../components";
 import { getUser } from "../api";
+import { useI18n } from "../lib/i18n";
 
 interface User {
   id: number;
@@ -37,6 +38,7 @@ interface RoleMatrixData {
 const EMPTY_FORM: UserForm = { name: "", email: "", role: "BRANCH_MANAGER", password: "" };
 
 export default function Users() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<"users" | "roles">("users");
 
   const users = useApi<User[]>("/security/users");
@@ -155,8 +157,8 @@ export default function Users() {
   return (
     <>
       <div className="topbar">
-        <h1>Users &amp; Access Control</h1>
-        <div className="crumb">Accounts · Roles &amp; Permissions · Multi-Tenant RBAC</div>
+        <h1>{t("nav_users")}</h1>
+        <div className="crumb">{t("crumb_users")}</div>
       </div>
 
       {/* Tabs */}
@@ -175,7 +177,7 @@ export default function Users() {
             color: tab === "users" ? "var(--amber)" : "var(--muted)",
           }}
         >
-          👥 User Accounts ({users.data?.length ?? 0})
+          👥 {t("tab_user_accounts")} ({users.data?.length ?? 0})
         </button>
         <button
           className={`tab ${tab === "roles" ? "active" : ""}`}
@@ -191,7 +193,7 @@ export default function Users() {
             color: tab === "roles" ? "var(--amber)" : "var(--muted)",
           }}
         >
-          🛡️ Role &amp; Capability Matrix
+          🛡️ {t("tab_role_matrix")}
         </button>
       </div>
 

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&display=swap");
+
 :root {
   --ink: #14231b;
   --ink-2: #1e3327;
@@ -17,6 +19,7 @@
   --mono: "JetBrains Mono", monospace;
   --serif: "Fraunces", Georgia, serif;
   --sans: "Instrument Sans", system-ui, sans-serif;
+  --arabic-sans: "Cairo", "Instrument Sans", system-ui, sans-serif;
   --shadow: 0 1px 2px rgba(20, 35, 27, 0.06), 0 8px 24px rgba(20, 35, 27, 0.08);
   --radius: 10px;
 }
@@ -32,6 +35,41 @@ body {
   -webkit-font-smoothing: antialiased;
   background-image: radial-gradient(circle at 15% 0%, rgba(217, 119, 6, 0.06), transparent 40%),
     radial-gradient(circle at 90% 100%, rgba(122, 155, 118, 0.08), transparent 45%);
+}
+
+html[dir="rtl"] body,
+body.rtl {
+  font-family: var(--arabic-sans);
+  direction: rtl;
+  text-align: right;
+}
+
+/* RTL Adjustments */
+html[dir="rtl"] .sidebar {
+  border-left: 1px solid rgba(233, 226, 210, 0.12);
+  border-right: none;
+}
+html[dir="rtl"] .main {
+  text-align: right;
+}
+html[dir="rtl"] .drawer {
+  right: auto;
+  left: 0;
+  border-left: none;
+  border-right: 1px solid var(--line);
+}
+html[dir="rtl"] .table th,
+html[dir="rtl"] .table td,
+html[dir="rtl"] .tbl th,
+html[dir="rtl"] .tbl td {
+  text-align: right;
+}
+html[dir="rtl"] .tbl th:last-child,
+html[dir="rtl"] .tbl td:last-child {
+  text-align: left;
+}
+html[dir="rtl"] .badge {
+  letter-spacing: normal;
 }
 
 /* ---------- Shell ---------- */

@@ -18,8 +18,10 @@ import {
 } from "../../components";
 import { StatusBadge } from "../../components/StatusBadge";
 import { KpiCard, MasterDetailView } from "../../components/MasterDetailView";
+import { useI18n } from "../../lib/i18n";
 
 export default function TransfersHub() {
+  const { t, isRtl } = useI18n();
   const [tab, setTab] = useState<"transit" | "orders" | "requisitions">("transit");
   const [selectedOrder, setSelectedOrder] = useState<TransferOrder | null>(null);
 
@@ -171,23 +173,23 @@ export default function TransfersHub() {
       <div className="topbar">
         <div>
           <h1 style={{ fontFamily: "var(--serif)", fontSize: 28, fontWeight: 600 }}>
-            Inter-Branch Stock Transfers
+            {t("trans.title")}
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>
-            Multi-stage transfer logistics, route dispatching, and branch arrival inspection
+            {t("trans.subtitle")}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="btn ghost" onClick={refreshAll} title="Refresh data">
-            ↻ Sync
+          <button type="button" className="btn ghost" onClick={refreshAll} title={isRtl ? "مزامنة البيانات" : "Refresh data"}>
+            ↻ {isRtl ? "مزامنة" : "Sync"}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => setDrawerReq({ open: true })}
           >
-            + New Transfer Request
+            {t("trans.btn.new_transfer")}
           </button>
         </div>
       </div>
@@ -195,32 +197,32 @@ export default function TransfersHub() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
         <KpiCard
-          label="In-Transit Shipments"
+          label={t("dash.kpi.transfers_transit")}
           value={inTransitCount}
-          subtext="Moving across locations"
+          subtext={isRtl ? "شحنات جارية بين المستودعات والفروع" : "Moving across locations"}
           icon="🚚"
           onClick={() => setTab("transit")}
           accent={inTransitCount > 0 ? "amber" : "default"}
         />
         <KpiCard
-          label="Overdue / Stale Routes"
+          label={isRtl ? "شحنات تجاوزت المدة (>24س)" : "Overdue / Stale Routes"}
           value={staleTransitCount}
-          subtext="Exceeding 24h route SLA"
+          subtext={isRtl ? "تتطلب متابعة الوصول" : "Exceeding 24h route SLA"}
           icon="⏳"
           onClick={() => setTab("transit")}
           accent={staleTransitCount > 0 ? "red" : "green"}
         />
         <KpiCard
-          label="Pending Dispatch"
+          label={isRtl ? "طلبات بانتظار الشحن" : "Pending Dispatch"}
           value={pendingOrdersCount}
-          subtext="Ready for warehouse picking"
+          subtext={isRtl ? "جاهزة للتجهيز والصرف" : "Ready for warehouse picking"}
           icon="📦"
           onClick={() => setTab("orders")}
         />
         <KpiCard
-          label="Completed Transfers"
+          label={isRtl ? "تحويلات مكتملة" : "Completed Transfers"}
           value={completedOrdersCount}
-          subtext="Successfully received"
+          subtext={isRtl ? "تم استلامها بنجاح" : "Successfully received"}
           icon="✓"
           onClick={() => setTab("orders")}
           accent="green"
@@ -232,26 +234,23 @@ export default function TransfersHub() {
         <button
           className={`tab ${tab === "transit" ? "active" : ""}`}
           onClick={() => setTab("transit")}
-          title="In-Transit Aging Board: Real-time tracking of inter-branch shipments currently on the road, transit duration, and overdue alerts"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "transit" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "transit" ? "var(--amber)" : "var(--muted)" }}
         >
-          🚚 In-Transit Aging Board ({aging.length})
+          🚚 {t("trans.tab.aging")} ({aging.length})
         </button>
         <button
           className={`tab ${tab === "orders" ? "active" : ""}`}
           onClick={() => setTab("orders")}
-          title="Transfer Orders & Lifecycle: Full dispatch, transit, branch receiving, variance reporting, and transfer history"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "orders" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "orders" ? "var(--amber)" : "var(--muted)" }}
         >
-          📑 Transfer Orders & Lifecycle ({orders.length})
+          📑 {t("trans.tab.orders")} ({orders.length})
         </button>
         <button
           className={`tab ${tab === "requisitions" ? "active" : ""}`}
           onClick={() => setTab("requisitions")}
-          title="Transfer Requisitions: Internal stock requests submitted by branch kitchen / store managers awaiting central dispatch approval"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "requisitions" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "requisitions" ? "var(--amber)" : "var(--muted)" }}
         >
-          📝 Transfer Requisitions ({reqs.length})
+          📝 {t("trans.tab.requisitions")} ({reqs.length})
         </button>
       </div>
 

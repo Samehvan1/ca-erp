@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Badge, ConfirmDialog, Empty, ErrorBanner, ListToolbar, Loading, Modal, Toast, apiReq, useApi, useListFilter } from "../components";
 import { getUser } from "../api";
+import { useI18n } from "../lib/i18n";
 
 interface ReportDef {
   id: number;
@@ -33,25 +34,26 @@ interface ScheduledReport {
   createdAt: string;
 }
 
-const REPORT_META: Record<string, { name: string; desc: string }> = {
-  "STOCK-VALUATION": { name: "Stock Valuation", desc: "Item quantities at weighted-average cost" },
-  VARIANCE: { name: "Variance Analysis", desc: "Theoretical vs actual quantities per period" },
-  "PO-OPEN-BALANCE": { name: "Open PO Balance", desc: "Outstanding purchase commitments" },
-  "SUPPLIER-AP": { name: "Supplier AP", desc: "Accounts payable balances per vendor" },
-  "STOCK-AGING": { name: "Stock Aging", desc: "Batch expiry risk profile" },
-  "VENDOR-SLA": { name: "Vendor SLA", desc: "OTIF, price variance, QC rejection" },
-  "MENU-MARGIN": { name: "Menu Margin", desc: "Recipe cost at current WAC" },
+const REPORT_META: Record<string, { nameEn: string; nameAr: string; descEn: string; descAr: string }> = {
+  "STOCK-VALUATION": { nameEn: "Stock Valuation", nameAr: "تقييم المخزون", descEn: "Item quantities at weighted-average cost", descAr: "كميات الأصناف بالتكلفة المتوسطة المرجحة" },
+  VARIANCE: { nameEn: "Variance Analysis", nameAr: "تحليل الفروقات والتباين", descEn: "Theoretical vs actual quantities per period", descAr: "الكميات النظرية مقابل الفعلية لكل فترة" },
+  "PO-OPEN-BALANCE": { nameEn: "Open PO Balance", nameAr: "أوامر الشراء المفتوحة", descEn: "Outstanding purchase commitments", descAr: "التزامات الشراء وأوامر التوريد الجارية" },
+  "SUPPLIER-AP": { nameEn: "Supplier AP", nameAr: "حسابات الموردين والدائنين", descEn: "Accounts payable balances per vendor", descAr: "أرصدة حسابات الموردين المستحقة" },
+  "STOCK-AGING": { nameEn: "Stock Aging", nameAr: "أعمار المخزون وتواريخ الصلاحية", descEn: "Batch expiry risk profile", descAr: "مخاطر انتهاء صلاحية التشغيلات وFEFO" },
+  "VENDOR-SLA": { nameEn: "Vendor SLA", nameAr: "مؤشرات أداء الموردين (SLA)", descEn: "OTIF, price variance, QC rejection", descAr: "نسب الالتزام بالمواعيد والجودة والأسعار" },
+  "MENU-MARGIN": { nameEn: "Menu Margin", nameAr: "هوامش تكاليف الوصفات والقوائم", descEn: "Recipe cost at current WAC", descAr: "تكلفة الوصفة المحدثة بمتوسط التكلفة WAC" },
 };
 
 const FREQUENCIES = ["REAL_TIME", "DAILY", "WEEKLY", "MONTHLY"];
 
 export default function Reports() {
+  const { t, lang: appLang } = useI18n();
   const defs = useApi<ReportDef[]>("/analytics/definitions");
   const snapshots = useApi<ReportSnapshot[]>("/analytics/snapshots/history");
   const schedules = useApi<ScheduledReport[]>("/analytics/schedules/list");
   const [tab, setTab] = useState<"reports" | "snapshots" | "schedules">("reports");
   const [active, setActive] = useState<string | null>(null);
-  const [lang, setLang] = useState<"EN" | "AR">("EN");
+  const [lang, setLang] = useState<"EN" | "AR">(appLang.toUpperCase() as "EN" | "AR");
   const [result, setResult] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -175,8 +177,8 @@ export default function Reports() {
   return (
     <>
       <div className="topbar">
-        <h1>Reports</h1>
-        <div className="crumb">Bilingual · Role-scoped · Snapshots &amp; schedules</div>
+        <h1>{t("nav_reports")}</h1>
+        <div className="crumb">{t("crumb_reports")}</div>
       </div>
 
       <div className="tabs">
@@ -185,21 +187,21 @@ export default function Reports() {
           onClick={() => setTab("reports")}
           title="Reports: Prebuilt enterprise reports covering stock valuation, FEFO expiry aging, spend analytics, and profit margins"
         >
-          Reports
+          {t("tab_reports")}
         </button>
         <button
           className={tab === "snapshots" ? "active" : ""}
           onClick={() => setTab("snapshots")}
           title="Snapshots: Point-in-time exported report runs with immutable parameter records and historical JSON data"
         >
-          Snapshots ({snapshots.data?.length ?? 0})
+          {t("tab_snapshots")} ({snapshots.data?.length ?? 0})
         </button>
         <button
           className={tab === "schedules" ? "active" : ""}
           onClick={() => setTab("schedules")}
           title="Schedules: Automated cron schedules for periodic report generation and recipient email notifications"
         >
-          Schedules ({schedules.data?.length ?? 0})
+          {t("tab_schedules")} ({schedules.data?.length ?? 0})
         </button>
       </div>
 
@@ -211,12 +213,14 @@ export default function Reports() {
             {defs.loading && <Loading />}
             {defs.error && <ErrorBanner message={defs.error} />}
             {(defs.data ?? []).map((d) => {
-              const meta = REPORT_META[d.code] ?? { name: d.code, desc: d.description ?? "" };
+              const meta = REPORT_META[d.code];
+              const name = meta ? (appLang === "ar" ? meta.nameAr : meta.nameEn) : d.name;
+              const desc = meta ? (appLang === "ar" ? meta.descAr : meta.descEn) : (d.description ?? "");
               return (
                 <div className="report-card" key={d.id} onClick={() => run(d.code)}>
                   <div className="code">{d.code}</div>
-                  <div className="name">{meta.name}</div>
-                  <div className="aud">{meta.desc}</div>
+                  <div className="name">{name}</div>
+                  <div className="aud">{desc}</div>
                 </div>
               );
             })}
@@ -225,12 +229,12 @@ export default function Reports() {
           {active && (
             <div className="card">
               <h2>
-                {REPORT_META[active]?.name ?? active}
+                {REPORT_META[active] ? (appLang === "ar" ? REPORT_META[active].nameAr : REPORT_META[active].nameEn) : active}
                 <span className="count">
-                  <button className="btn ghost sm" onClick={() => toggleLang("EN")}>
+                  <button className={`btn ghost sm ${lang === "EN" ? "primary" : ""}`} onClick={() => toggleLang("EN")}>
                     EN
                   </button>{" "}
-                  <button className="btn ghost sm" onClick={() => toggleLang("AR")}>
+                  <button className={`btn ghost sm ${lang === "AR" ? "primary" : ""}`} onClick={() => toggleLang("AR")}>
                     AR
                   </button>{" "}
                   {canSnapshot && (
@@ -411,11 +415,15 @@ export default function Reports() {
                 <label>Report</label>
                 <select value={scheduleForm.reportCode} onChange={(e) => setScheduleForm({ ...scheduleForm, reportCode: e.target.value })} required>
                   <option value="">Select report…</option>
-                  {(defs.data ?? []).map((d) => (
-                    <option key={d.id} value={d.code}>
-                      {d.code} · {REPORT_META[d.code]?.name ?? d.name}
-                    </option>
-                  ))}
+                  {(defs.data ?? []).map((d) => {
+                    const meta = REPORT_META[d.code];
+                    const rName = meta ? (appLang === "ar" ? meta.nameAr : meta.nameEn) : d.name;
+                    return (
+                      <option key={d.id} value={d.code}>
+                        {d.code} · {rName}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="field">

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Badge, ConfirmDialog, Empty, ErrorBanner, HistoryButton, ListToolbar, Loading, Modal, Toast, apiReq, useApi, useListFilter } from "../components";
+import { useI18n } from "../lib/i18n";
 
 interface Recipe {
   id: number;
@@ -91,6 +92,7 @@ interface PosTerminal {
 const emptyRow: RecipeRow = { itemId: "", brandVariantId: "", quantity: "", yieldFactor: "", shrinkagePct: "" };
 
 export default function Recipes() {
+  const { t, isRtl } = useI18n();
   const [tab, setTab] = useState<"recipes" | "waste" | "variances" | "mappings">("recipes");
   const [costId, setCostId] = useState<number | null>(null);
   const recipes = useApi<Recipe[]>("/recipes/recipes");
@@ -290,38 +292,34 @@ export default function Recipes() {
   return (
     <>
       <div className="topbar">
-        <h1>Recipes &amp; Costing</h1>
-        <div className="crumb">Recipes · Waste · Variance · Menu Mappings</div>
+        <h1>{t("recipe.title")}</h1>
+        <div className="crumb">{t("recipe.subtitle")}</div>
       </div>
 
       <div className="tabs">
         <button
           className={tab === "recipes" ? "active" : ""}
           onClick={() => setTab("recipes")}
-          title="Recipes (BOM): Bill of Materials formulas, portion sizes, preparation costs, and theoretical recipe yield"
         >
-          Recipes ({recipes.data?.length ?? 0})
+          🍲 {isRtl ? "الوصفات والمعايير" : "Recipes (BOM)"} ({recipes.data?.length ?? 0})
         </button>
         <button
           className={tab === "waste" ? "active" : ""}
           onClick={() => setTab("waste")}
-          title="Waste Logs: Kitchen prep loss, expiration discards, and spoiled raw ingredient logging"
         >
-          Waste ({waste.data?.length ?? 0})
+          🗑️ {isRtl ? "سجلات الهالك" : "Waste Logs"} ({waste.data?.length ?? 0})
         </button>
         <button
           className={tab === "variances" ? "active" : ""}
           onClick={() => setTab("variances")}
-          title="Variances: Discrepancies between theoretical consumption based on sales vs actual physical inventory drawdown"
         >
-          Variances ({variances.data?.length ?? 0})
+          📊 {isRtl ? "فروقات الاستهلاك" : "Variances"} ({variances.data?.length ?? 0})
         </button>
         <button
           className={tab === "mappings" ? "active" : ""}
           onClick={() => setTab("mappings")}
-          title="Menu Mappings: Mapping POS sellable menu items and modifiers to recipe BOMs for automated ingredient depletion"
         >
-          Menu Mappings ({mappings.data?.length ?? 0})
+          🔗 {isRtl ? "ربط الكاشير (POS)" : "Menu Mappings"} ({mappings.data?.length ?? 0})
         </button>
       </div>
 
@@ -330,7 +328,7 @@ export default function Recipes() {
           <div className="toolbar">
             <div className="spacer" />
             <button className="btn amber" onClick={() => setShowRecipe(true)}>
-              + New recipe
+              {t("recipe.btn.new")}
             </button>
           </div>
           <ListToolbar

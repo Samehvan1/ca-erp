@@ -33,8 +33,10 @@ import {
 } from "../../components";
 import { StatusBadge } from "../../components/StatusBadge";
 import { KpiCard, MasterDetailView } from "../../components/MasterDetailView";
+import { useI18n } from "../../lib/i18n";
 
 export default function ProcurementHub() {
+  const { t, isRtl } = useI18n();
   const [tab, setTab] = useState<"reqs" | "pos" | "match" | "replenish" | "grns" | "payments">("reqs");
   const [selectedPo, setSelectedPo] = useState<Po | null>(null);
 
@@ -222,14 +224,14 @@ export default function ProcurementHub() {
             className="btn ghost"
             onClick={() => setDrawerReq({ open: true })}
           >
-            + New Requisition
+            {t("proc.btn.new_req")}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => setDrawerPo({ open: true })}
           >
-            + Issue Purchase Order
+            {t("proc.btn.new_po")}
           </button>
         </div>
       </div>
@@ -237,32 +239,32 @@ export default function ProcurementHub() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
         <KpiCard
-          label="Open Purchase Orders"
+          label={t("dash.kpi.open_pos")}
           value={openPosCount}
-          subtext="Awaiting delivery fulfillment"
+          subtext={isRtl ? "بانتظار اكتمال التوريد" : "Awaiting delivery fulfillment"}
           icon="📦"
           onClick={() => setTab("pos")}
           accent={openPosCount > 0 ? "amber" : "default"}
         />
         <KpiCard
-          label="Pending 3-Way Match"
+          label={t("dash.kpi.pending_invoices")}
           value={pendingInvsCount}
-          subtext="Invoices to reconcile & approve"
+          subtext={isRtl ? "فواتير بانتظار المطابقة والاعتماد" : "Invoices to reconcile & approve"}
           icon="⚖️"
           onClick={() => setTab("match")}
           accent={pendingInvsCount > 0 ? "red" : "green"}
         />
         <KpiCard
-          label="Pending Requisitions"
+          label={t("dash.kpi.pending_reqs")}
           value={pendingReqsCount}
-          subtext="Awaiting DoA authorization"
+          subtext={isRtl ? "بانتظار اعتماد الصلاحيات (DoA)" : "Awaiting DoA authorization"}
           icon="📝"
           onClick={() => setTab("reqs")}
         />
         <KpiCard
-          label="Total Disbursements (YTD)"
-          value={`${totalApSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })} EGP`}
-          subtext="Settled vendor payments"
+          label={isRtl ? "إجمالي المنصرف للموردين" : "Total Disbursements"}
+          value={`${totalApSpent.toLocaleString(isRtl ? "ar-EG" : "en-US", { minimumFractionDigits: 2 })} ${t("common.egp")}`}
+          subtext={isRtl ? "مدفوعات الموردين المسددة" : "Settled vendor payments"}
           icon="💳"
           onClick={() => setTab("payments")}
           accent="green"
@@ -274,50 +276,44 @@ export default function ProcurementHub() {
         <button
           className={`tab ${tab === "reqs" ? "active" : ""}`}
           onClick={() => setTab("reqs")}
-          title="Purchase Requisitions: Internal department requests, budget approvals, and one-click PO conversion"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "reqs" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "reqs" ? "var(--amber)" : "var(--muted)" }}
         >
-          📝 Requisitions ({reqs.length})
+          📝 {t("proc.tab.reqs")} ({reqs.length})
         </button>
         <button
           className={`tab ${tab === "pos" ? "active" : ""}`}
           onClick={() => setTab("pos")}
-          title="Purchase Orders & Pipeline: Supplier procurement orders, approval status, delivery milestones, and line item fulfillment"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "pos" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "pos" ? "var(--amber)" : "var(--muted)" }}
         >
-          📑 Purchase Orders & Pipeline ({pos.length})
+          📑 {t("proc.tab.pos")} ({pos.length})
         </button>
         <button
           className={`tab ${tab === "match" ? "active" : ""}`}
           onClick={() => setTab("match")}
-          title="3-Way Match & Invoices: Automated audit reconciling PO unit cost, GRN received quantity, and supplier invoice amount for AP clearance"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "match" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "match" ? "var(--amber)" : "var(--muted)" }}
         >
-          ⚖️ 3-Way Match & Invoices ({invs.length})
+          ⚖️ {t("proc.tab.match")} ({invs.length})
         </button>
         <button
           className={`tab ${tab === "replenish" ? "active" : ""}`}
           onClick={() => setTab("replenish")}
-          title="Replenishment Planner: Real-time reorder suggestions triggered by warehouse stock falling below safety stock & ROP thresholds"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "replenish" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "replenish" ? "var(--amber)" : "var(--muted)" }}
         >
-          ⚡ Replenishment Planner
+          ⚡ {t("proc.tab.replenish")}
         </button>
         <button
           className={`tab ${tab === "grns" ? "active" : ""}`}
           onClick={() => setTab("grns")}
-          title="Goods Receipts (GRN): Receiving dock check-in, batch lot tagging, expiry tracking, and instant inventory stock ledger posting"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "grns" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "grns" ? "var(--amber)" : "var(--muted)" }}
         >
-          📥 Goods Receipts ({grns.length})
+          📥 {t("proc.tab.grns")} ({grns.length})
         </button>
         <button
           className={`tab ${tab === "payments" ? "active" : ""}`}
           onClick={() => setTab("payments")}
-          title="Disbursements & AP Payments: Vendor settlement tracking, approved payment batches, and invoice payment receipts"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "payments" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "payments" ? "var(--amber)" : "var(--muted)" }}
         >
-          💳 Disbursements ({pays.length})
+          💳 {t("proc.tab.payments")} ({pays.length})
         </button>
       </div>
 

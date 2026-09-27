@@ -22,8 +22,10 @@ import {
 } from "../../components";
 import { StatusBadge } from "../../components/StatusBadge";
 import { KpiCard } from "../../components/MasterDetailView";
+import { useI18n } from "../../lib/i18n";
 
 export default function InventoryHub() {
+  const { t, isRtl } = useI18n();
   const [tab, setTab] = useState<"matrix" | "fefo" | "items" | "rop" | "adjustments" | "warehouses" | "masterdata">("matrix");
 
   // API Calls
@@ -166,36 +168,36 @@ export default function InventoryHub() {
       <div className="topbar">
         <div>
           <h1 style={{ fontFamily: "var(--serif)", fontSize: 28, fontWeight: 600 }}>
-            Inventory & Stock Control
+            {t("inv.title")}
           </h1>
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>
-            Multi-warehouse stock matrix, FEFO batch freshness tracking, and inventory reconciliations
+            {t("inv.subtitle")}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="btn ghost" onClick={refreshAll} title="Refresh data">
-            ↻ Sync
+          <button type="button" className="btn ghost" onClick={refreshAll} title={isRtl ? "مزامنة البيانات" : "Refresh data"}>
+            ↻ {isRtl ? "مزامنة" : "Sync"}
           </button>
           <button
             type="button"
             className="btn ghost"
             onClick={() => setDrawerAdj({ open: true })}
           >
-            + Record Adjustment
+            {t("inv.btn.new_adjustment")}
           </button>
           <button
             type="button"
             className="btn ghost"
             onClick={() => setDrawerBatch({ open: true })}
           >
-            + Check In Batch
+            {t("inv.btn.new_batch")}
           </button>
           <button
             type="button"
             className="btn"
             onClick={() => setDrawerItem({ open: true })}
           >
-            + New Master Item
+            {t("inv.btn.new_item")}
           </button>
         </div>
       </div>
@@ -203,32 +205,32 @@ export default function InventoryHub() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
         <KpiCard
-          label="Total Active SKUs"
+          label={isRtl ? "إجمالي الأصناف النشطة" : "Total Active SKUs"}
           value={items.length}
-          subtext={`${warehouses.length} Active Warehouse Locations`}
+          subtext={isRtl ? `${warehouses.length} مستودعات وفروع مسجلة` : `${warehouses.length} Active Warehouse Locations`}
           icon="▤"
           onClick={() => setTab("items")}
         />
         <KpiCard
-          label="Stock on Hand"
-          value={totalStockQty.toLocaleString()}
-          subtext="Total units across all nodes"
+          label={t("inv.col.stock_on_hand")}
+          value={totalStockQty.toLocaleString(isRtl ? "ar-EG" : "en-US")}
+          subtext={isRtl ? "إجمالي الوحدات المتاحة بجميع الفروع" : "Total units across all nodes"}
           icon="◈"
           onClick={() => setTab("matrix")}
           accent="amber"
         />
         <KpiCard
-          label="Expiring Batches (≤ 30d)"
+          label={isRtl ? "شحنات تقترب من الانتهاء (≤ 30 يوم)" : "Expiring Batches (≤ 30d)"}
           value={expiringSoonCount}
-          subtext="FEFO rotation required"
+          subtext={isRtl ? "تدوير المخزون حسب الصلاحية (FEFO)" : "FEFO rotation required"}
           icon="⏳"
           onClick={() => setTab("fefo")}
           accent={expiringSoonCount > 0 ? "red" : "green"}
         />
         <KpiCard
-          label="Replenishment Alerts"
+          label={t("dash.kpi.low_stock_alerts")}
           value={lowStockCount}
-          subtext="Items below reorder point"
+          subtext={isRtl ? "أصناف بلغت نقطة إعادة الطلب (ROP)" : "Items below reorder point"}
           icon="⚠️"
           onClick={() => setTab("rop")}
           accent={lowStockCount > 0 ? "red" : "green"}
@@ -240,58 +242,51 @@ export default function InventoryHub() {
         <button
           className={`tab ${tab === "matrix" ? "active" : ""}`}
           onClick={() => setTab("matrix")}
-          title="Multi-Warehouse Matrix: Live stock balances, inventory valuation, and distribution across all warehouse locations"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "matrix" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "matrix" ? "var(--amber)" : "var(--muted)" }}
         >
-          📊 Multi-Warehouse Matrix
+          📊 {t("inv.tab.matrix")}
         </button>
         <button
           className={`tab ${tab === "fefo" ? "active" : ""}`}
           onClick={() => setTab("fefo")}
-          title="FEFO Batches & Freshness: First-Expired First-Out batch tracker, expiry countdowns, and shelf-life aging analysis"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "fefo" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "fefo" ? "var(--amber)" : "var(--muted)" }}
         >
-          ⏳ FEFO Batches & Freshness ({batches.length})
+          ⏳ {t("inv.tab.batches")} ({batches.length})
         </button>
         <button
           className={`tab ${tab === "items" ? "active" : ""}`}
           onClick={() => setTab("items")}
-          title="Catalog & SKUs: Master item definitions, project isolation scoping, unit of measure (UOM), and valuation methods (WAC/FIFO)"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "items" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "items" ? "var(--amber)" : "var(--muted)" }}
         >
-          📦 Catalog & SKUs ({items.length})
+          📦 {t("inv.tab.items")} ({items.length})
         </button>
         <button
           className={`tab ${tab === "rop" ? "active" : ""}`}
           onClick={() => setTab("rop")}
-          title="ROP & Safety Stock: Reorder point triggers, safety stock buffers, lead times, and automated replenishment policies"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "rop" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "rop" ? "var(--amber)" : "var(--muted)" }}
         >
-          ⚙️ ROP & Safety Stock ({rops.length})
+          ⚙️ {t("inv.tab.rop")} ({rops.length})
         </button>
         <button
           className={`tab ${tab === "adjustments" ? "active" : ""}`}
           onClick={() => setTab("adjustments")}
-          title="Adjustments & Reconciliations: Physical stock variances, cycle count corrections, damage write-offs, and approval history"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "adjustments" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "adjustments" ? "var(--amber)" : "var(--muted)" }}
         >
-          📝 Adjustments & Reconciliations ({adjustments.length})
+          📝 {t("inv.tab.adjustments")} ({adjustments.length})
         </button>
         <button
           className={`tab ${tab === "warehouses" ? "active" : ""}`}
           onClick={() => setTab("warehouses")}
-          title="Warehouse Locations: Physical storage facilities, central distribution hubs, transit virtual nodes, and branch depots"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "warehouses" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "warehouses" ? "var(--amber)" : "var(--muted)" }}
         >
-          🏢 Warehouse Locations ({warehouses.length})
+          🏢 {t("inv.tab.warehouses")} ({warehouses.length})
         </button>
         <button
           className={`tab ${tab === "masterdata" ? "active" : ""}`}
           onClick={() => setTab("masterdata")}
-          title="Master Data & Units: Categories hierarchy, units of measure (UOM), smart unit conversion rules, and pack ratio calculator"
           style={{ padding: "10px 18px", fontWeight: 600, fontSize: 13.5, background: "none", border: "none", borderBottom: tab === "masterdata" ? "3px solid var(--amber)" : "3px solid transparent", cursor: "pointer", color: tab === "masterdata" ? "var(--amber)" : "var(--muted)" }}
         >
-          🏷️ Master Data & Units
+          🏷️ {t("inv.tab.master")}
         </button>
       </div>
 

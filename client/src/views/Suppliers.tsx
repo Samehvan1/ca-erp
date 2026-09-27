@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Badge, ConfirmDialog, Empty, ErrorBanner, HistoryButton, ListToolbar, Loading, Modal, Toast, apiReq, useApi, useListFilter } from "../components";
+import { useI18n } from "../lib/i18n";
 
 interface Vendor {
   id: number;
@@ -50,6 +51,7 @@ const EMPTY_VENDOR = { code: "", name: "", registrationNo: "", taxId: "", bankDe
 const EMPTY_PRICE = { vendorId: "", brandVariantId: "", unitPrice: "", validFrom: "", validTo: "", moq: "" };
 
 export default function Suppliers() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<"vendors" | "prices" | "slas">("vendors");
   const vendors = useApi<Vendor[]>("/suppliers/vendors");
   const prices = useApi<PriceList[]>("/suppliers/price-lists");
@@ -242,8 +244,8 @@ export default function Suppliers() {
   return (
     <>
       <div className="topbar">
-        <h1>Suppliers</h1>
-        <div className="crumb">Vendors · Price Lists · SLA</div>
+        <h1>{t("nav_suppliers")}</h1>
+        <div className="crumb">{t("crumb_suppliers")}</div>
       </div>
 
       <div className="tabs">
@@ -252,21 +254,21 @@ export default function Suppliers() {
           onClick={() => setTab("vendors")}
           title="Vendors: Supplier master records, tax & commercial registration, contact persons, and bank details"
         >
-          Vendors ({vendors.data?.length ?? 0})
+          {t("tab_vendors")} ({vendors.data?.length ?? 0})
         </button>
         <button
           className={tab === "prices" ? "active" : ""}
           onClick={() => setTab("prices")}
           title="Price lists: Vendor price agreements, unit rates, minimum order quantities (MOQ), and contract validity periods"
         >
-          Price lists ({prices.data?.length ?? 0})
+          {t("tab_price_lists")} ({prices.data?.length ?? 0})
         </button>
         <button
           className={tab === "slas" ? "active" : ""}
           onClick={() => setTab("slas")}
           title="SLA scorecards: Supplier delivery reliability, lead time compliance, fulfillment rates, and quality scorecards"
         >
-          SLA scorecards ({slas.data?.length ?? 0})
+          {t("tab_sla_scorecards")} ({slas.data?.length ?? 0})
         </button>
       </div>
 
@@ -275,7 +277,7 @@ export default function Suppliers() {
           <div className="toolbar">
             <div className="spacer" />
             <button className="btn amber" onClick={() => { setErr(null); setShowVendor(true); }}>
-              + New vendor
+              + {t("btn_new_vendor")}
             </button>
           </div>
           <ListToolbar

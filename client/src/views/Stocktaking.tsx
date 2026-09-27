@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Badge, ConfirmDialog, Empty, ErrorBanner, HistoryButton, ListToolbar, Loading, Modal, Toast, apiReq, useApi, useListFilter } from "../components";
+import { useI18n } from "../lib/i18n";
 
 interface Stocktake {
   id: number;
@@ -34,6 +35,7 @@ interface Warehouse {
 }
 
 export default function Stocktaking() {
+  const { t, isRtl } = useI18n();
   const [tab, setTab] = useState<"stocktakes" | "adjustments">("stocktakes");
   const stocktakes = useApi<Stocktake[]>("/stocktaking/stocktakes");
   const adjustments = useApi<Adjustment[]>("/stocktaking/adjustments");
@@ -176,14 +178,14 @@ export default function Stocktaking() {
   return (
     <>
       <div className="topbar">
-        <h1>Stocktaking</h1>
-        <div className="crumb">Cycle counts · Variance adjustments</div>
+        <h1>{t("stocktake.title")}</h1>
+        <div className="crumb">{t("stocktake.subtitle")}</div>
       </div>
 
       <div className="toolbar">
         <div className="spacer" />
         <button className="btn amber" onClick={() => setShowNew(true)}>
-          + New stocktake
+          {t("stocktake.btn.new")}
         </button>
       </div>
 
@@ -191,16 +193,14 @@ export default function Stocktaking() {
         <button
           className={tab === "stocktakes" ? "active" : ""}
           onClick={() => setTab("stocktakes")}
-          title="Stocktakes: Physical count sessions, blind count sheets, and variance audits per warehouse"
         >
-          Stocktakes ({stocktakes.data?.length ?? 0})
+          📋 {isRtl ? "جلسات الجرد" : "Stocktakes"} ({stocktakes.data?.length ?? 0})
         </button>
         <button
           className={tab === "adjustments" ? "active" : ""}
           onClick={() => setTab("adjustments")}
-          title="Adjustments: Stock reconciliation postings and variance write-offs resulting from completed counts"
         >
-          Adjustments ({adjustments.data?.length ?? 0})
+          ⚖️ {isRtl ? "تسويات الفروقات" : "Adjustments"} ({adjustments.data?.length ?? 0})
         </button>
       </div>
 

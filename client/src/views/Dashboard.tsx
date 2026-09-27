@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { User } from "../api";
 import { Badge, Empty, ErrorBanner, Loading } from "../components";
+import { useI18n } from "../lib/i18n";
 
 interface Summary {
   stockValue: number;
@@ -34,17 +35,15 @@ interface AuditRow {
   user?: { name: string } | null;
 }
 
-const fmt = (n: number) =>
-  n.toLocaleString("en-GB", { maximumFractionDigits: 0 });
-
-const money = (n: number) =>
-  n.toLocaleString("en-GB", { maximumFractionDigits: 0 }) + " EGP";
-
 export default function Dashboard({ user }: { user: User }) {
+  const { t, isRtl } = useI18n();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [aging, setAging] = useState<AgingRow[] | null>(null);
   const [audit, setAudit] = useState<AuditRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  const fmt = (n: number) => n.toLocaleString(isRtl ? "ar-EG" : "en-GB", { maximumFractionDigits: 0 });
+  const money = (n: number) => `${n.toLocaleString(isRtl ? "ar-EG" : "en-GB", { maximumFractionDigits: 0 })} ${t("common.egp")}`;
 
   useEffect(() => {
     const token = localStorage.getItem("ca_token");
@@ -91,21 +90,21 @@ export default function Dashboard({ user }: { user: User }) {
   const stale = Array.isArray(aging) ? aging.filter((a) => a.stale).length : 0;
 
   const kpis: { label: string; value: string; hint: string; cls?: string }[] = [
-    { label: "Stock value", value: summary ? money(summary.stockValue) : "…", hint: "at weighted avg cost" },
-    { label: "Low stock items", value: summary ? fmt(summary.lowStockCount) : "…", hint: "at/below reorder point", cls: (summary?.lowStockCount ?? 0) > 0 ? "warn" : "ok" },
-    { label: "Open purchase orders", value: summary ? fmt(summary.openPoCount) : "…", hint: "not fully received" },
-    { label: "Pending approvals", value: summary ? fmt(summary.pendingApprovals) : "…", hint: "reqs · invoices · adjustments · waste", cls: (summary?.pendingApprovals ?? 0) > 0 ? "warn" : "ok" },
-    { label: "Accounts payable", value: summary ? money(summary.apBalance) : "…", hint: "supplier ledger balances" },
-    { label: "Expiring soon", value: summary ? fmt(summary.expiringSoon) : "…", hint: "batches within 30 days", cls: (summary?.expiringSoon ?? 0) > 0 ? "warn" : "ok" },
-    { label: "In-transit orders", value: summary ? fmt(summary.inTransitCount) : "…", hint: `${stale} stale (>3 days)` },
-    { label: "Pending stocktakes", value: summary ? fmt(summary.pendingStocktakes) : "…", hint: "scheduled or in progress" },
+    { label: t("dash.kpi.total_stock"), value: summary ? money(summary.stockValue) : "…", hint: isRtl ? "وفقاً لمتوسط التكلفة المرجح (WAC)" : "at weighted avg cost" },
+    { label: t("dash.kpi.low_stock_alerts"), value: summary ? fmt(summary.lowStockCount) : "…", hint: isRtl ? "بلغت أو أقل من حد إعادة الطلب" : "at/below reorder point", cls: (summary?.lowStockCount ?? 0) > 0 ? "warn" : "ok" },
+    { label: t("dash.kpi.open_pos"), value: summary ? fmt(summary.openPoCount) : "…", hint: isRtl ? "بانتظار التوريد والاستلام" : "not fully received" },
+    { label: t("dash.kpi.pending_reqs"), value: summary ? fmt(summary.pendingApprovals) : "…", hint: isRtl ? "طلبات · فواتير · تسويات · هالك" : "reqs · invoices · adjustments · waste", cls: (summary?.pendingApprovals ?? 0) > 0 ? "warn" : "ok" },
+    { label: isRtl ? "مستحقات الموردين (AP)" : "Accounts payable", value: summary ? money(summary.apBalance) : "…", hint: isRtl ? "أرصدة سجل الموردين المستحقة" : "supplier ledger balances" },
+    { label: isRtl ? "شحنات تقترب من الانتهاء" : "Expiring soon", value: summary ? fmt(summary.expiringSoon) : "…", hint: isRtl ? "شحنات خلال 30 يوماً (FEFO)" : "batches within 30 days", cls: (summary?.expiringSoon ?? 0) > 0 ? "warn" : "ok" },
+    { label: t("dash.kpi.transfers_transit"), value: summary ? fmt(summary.inTransitCount) : "…", hint: isRtl ? `${stale} شحنة متأخرة (>3 أيام)` : `${stale} stale (>3 days)` },
+    { label: isRtl ? "دورات جرد قيد التنفيذ" : "Pending stocktakes", value: summary ? fmt(summary.pendingStocktakes) : "…", hint: isRtl ? "مجدولة أو جارية بالمستودعات" : "scheduled or in progress" },
   ];
 
   return (
     <>
       <div className="topbar">
-        <h1>Operations overview</h1>
-        <div className="crumb">Welcome back, {user.name.split(" ")[0]}</div>
+        <h1>{t("dash.title")}</h1>
+        <div className="crumb">{isRtl ? `مرحباً بك، ${user.name}` : `Welcome back, ${user.name.split(" ")[0]}`}</div>
       </div>
 
       {err && <ErrorBanner message={err} />}
@@ -123,21 +122,22 @@ export default function Dashboard({ user }: { user: User }) {
       <div className="grid two">
         <div className="card">
           <h2>
-            In-transit aging <span className="count">{aging?.length ?? 0} orders</span>
+            {isRtl ? "شحنات التحويل في الطريق" : "In-transit aging"}{" "}
+            <span className="count">{aging?.length ?? 0} {isRtl ? "شحنة" : "orders"}</span>
           </h2>
           {!aging ? (
             <Loading />
           ) : aging.length === 0 ? (
-            <Empty text="No shipments in transit." />
+            <Empty text={isRtl ? "لا توجد شحنات منقولة حالياً." : "No shipments in transit."} />
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Order</th>
-                    <th>Route</th>
-                    <th>Days</th>
-                    <th>Status</th>
+                    <th>{isRtl ? "رقم الشحنة" : "Order"}</th>
+                    <th>{isRtl ? "المسار" : "Route"}</th>
+                    <th>{isRtl ? "الأيام" : "Days"}</th>
+                    <th>{t("common.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,7 +145,7 @@ export default function Dashboard({ user }: { user: User }) {
                     <tr key={a.id}>
                       <td className="mono">{a.number}</td>
                       <td>
-                        {a.from} → {a.to}
+                        {a.from} {isRtl ? "←" : "→"} {a.to}
                       </td>
                       <td className="num">{a.daysInTransit}</td>
                       <td>{a.stale ? <Badge status="STALE" /> : <Badge status="IN_TRANSIT" />}</td>
@@ -159,16 +159,17 @@ export default function Dashboard({ user }: { user: User }) {
 
         <div className="card">
           <h2>
-            Latest audit activity <span className="count">hash-chained</span>
+            {isRtl ? "أحدث حركات سجل التدقيق" : "Latest audit activity"}{" "}
+            <span className="count">🔒 {isRtl ? "مشفرة SHA-256" : "hash-chained"}</span>
           </h2>
           {!audit ? (
             <Loading />
           ) : audit.length === 0 ? (
-            <Empty text="No audit entries." />
+            <Empty text={isRtl ? "لا توجد حركات تدقيق مسجلة." : "No audit entries."} />
           ) : (
             audit.map((a) => (
               <div className="audit-row" key={a.id}>
-                <span className="ts">{new Date(a.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+                <span className="ts">{new Date(a.timestamp).toLocaleTimeString(isRtl ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
                 <span className="act">{a.action}</span>
                 <span className="ent">
                   {a.entityType} {a.entityId ? `#${a.entityId}` : ""}

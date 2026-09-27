@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { apiReq, Badge, ConfirmDialog, Empty, ErrorBanner, HistoryButton, ListToolbar, Loading, Modal, Toast, useApi, useListFilter } from "../components";
+import { useI18n } from "../lib/i18n";
 
 interface TrialRow {
   code: string;
@@ -57,6 +58,7 @@ interface GlLine {
 }
 
 export default function Finance() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<"trial" | "postings" | "ap" | "accounts" | "costCenters">("trial");
   const trial = useApi<{ rows: TrialRow[]; totalDebit: number; totalCredit: number; balanced: boolean }>("/finance/trial-balance");
   const postings = useApi<Posting[]>("/finance/postings");
@@ -246,8 +248,8 @@ export default function Finance() {
   return (
     <>
       <div className="topbar">
-        <h1>Finance</h1>
-        <div className="crumb">Trial Balance · GL · AP Ledger</div>
+        <h1>{t("nav_finance")}</h1>
+        <div className="crumb">{t("crumb_finance")}</div>
       </div>
 
       <div className="tabs">
@@ -256,35 +258,35 @@ export default function Finance() {
           onClick={() => setTab("trial")}
           title="Trial balance: Overview of debits, credits, and closing balances for all active General Ledger accounts"
         >
-          Trial balance
+          {t("tab_trial_balance")}
         </button>
         <button
           className={tab === "postings" ? "active" : ""}
           onClick={() => setTab("postings")}
           title="GL postings: Double-entry journal entries generated from inventory movements, invoices, and manual vouchers"
         >
-          GL postings ({postings.data?.length ?? 0})
+          {t("tab_gl_postings")} ({postings.data?.length ?? 0})
         </button>
         <button
           className={tab === "ap" ? "active" : ""}
           onClick={() => setTab("ap")}
           title="AP ledger: Accounts Payable subledger detailing outstanding vendor balances, invoices, and scheduled payments"
         >
-          AP ledger ({ap.data?.length ?? 0})
+          {t("tab_ap_ledger")} ({ap.data?.length ?? 0})
         </button>
         <button
           className={tab === "accounts" ? "active" : ""}
           onClick={() => setTab("accounts")}
           title="Accounts: Chart of Accounts structure, financial classification codes, and reporting parents"
         >
-          Accounts ({accounts.data?.length ?? 0})
+          {t("tab_chart_accounts")} ({accounts.data?.length ?? 0})
         </button>
         <button
           className={tab === "costCenters" ? "active" : ""}
           onClick={() => setTab("costCenters")}
           title="Cost centers: Business units, departments, and store locations for departmental expense allocation"
         >
-          Cost centers ({costCenters.data?.length ?? 0})
+          {t("tab_cost_centers")} ({costCenters.data?.length ?? 0})
         </button>
       </div>
 
@@ -300,17 +302,17 @@ export default function Finance() {
               <div className="kpis">
                 <div className="kpi">
                   <div className="kpi-v num">{trial.data.totalDebit.toFixed(2)}</div>
-                  <div className="kpi-l">Total debit</div>
+                  <div className="kpi-l">{t("lbl_total_debit")}</div>
                 </div>
                 <div className="kpi">
                   <div className="kpi-v num">{trial.data.totalCredit.toFixed(2)}</div>
-                  <div className="kpi-l">Total credit</div>
+                  <div className="kpi-l">{t("lbl_total_credit")}</div>
                 </div>
                 <div className="kpi">
                   <div className="kpi-v">
                     <Badge status={trial.data.balanced ? "BALANCED" : "UNBALANCED"} />
                   </div>
-                  <div className="kpi-l">Double-entry check</div>
+                  <div className="kpi-l">{t("lbl_balanced_status")}</div>
                 </div>
               </div>
               <div className="tbl-wrap">

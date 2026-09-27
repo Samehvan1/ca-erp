@@ -1,3 +1,5 @@
+import { useI18n } from "../lib/i18n";
+
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral" | "purple";
 
 export interface StatusBadgeProps {
@@ -9,6 +11,7 @@ export interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, tone, icon, size = "md", dot = true }: StatusBadgeProps) {
+  const { t } = useI18n();
   const s = status.toLowerCase();
   let resolvedTone: StatusTone = tone || "neutral";
 
@@ -24,11 +27,13 @@ export function StatusBadge({ status, tone, icon, size = "md", dot = true }: Sta
     }
   }
 
+  const translated = t(`status.${status.toUpperCase()}`, status.replace(/_/g, " "));
+
   return (
     <span className={`status-pill tone-${resolvedTone} size-${size}`}>
       {dot && <span className="status-dot" />}
       {icon && <span className="status-icon">{icon}</span>}
-      <span className="status-text">{status.replace(/_/g, " ")}</span>
+      <span className="status-text">{translated}</span>
     </span>
   );
 }
