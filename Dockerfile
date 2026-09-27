@@ -9,11 +9,12 @@ WORKDIR /app
 COPY package*.json ./
 COPY server/package*.json ./server/
 COPY client/package*.json ./client/
+COPY server/prisma/ ./server/prisma/
 
 # Install all dependencies across workspace
 RUN npm ci
 
-# Copy server files and Prisma schema
+# Copy server files and compile
 COPY server/ ./server/
 WORKDIR /app/server
 RUN npx prisma generate
