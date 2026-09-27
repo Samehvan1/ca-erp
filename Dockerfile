@@ -39,12 +39,12 @@ WORKDIR /app/server
 ENV NODE_ENV=production
 ENV PORT=4000
 ENV CLIENT_DIST_PATH=/app/client/dist
+ENV NODE_PATH=/app/node_modules
 
 # Copy built artifacts from builder stage
 COPY --from=builder /app/package*.json /app/
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/server/package*.json /app/server/
-COPY --from=builder /app/server/node_modules /app/server/node_modules
 COPY --from=builder /app/server/dist /app/server/dist
 COPY --from=builder /app/server/prisma /app/server/prisma
 COPY --from=builder /app/client/dist /app/client/dist
