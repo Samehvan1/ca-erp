@@ -34,14 +34,57 @@ interface ScheduledReport {
   createdAt: string;
 }
 
-const REPORT_META: Record<string, { nameEn: string; nameAr: string; descEn: string; descAr: string }> = {
-  "STOCK-VALUATION": { nameEn: "Stock Valuation", nameAr: "تقييم المخزون", descEn: "Item quantities at weighted-average cost", descAr: "كميات الأصناف بالتكلفة المتوسطة المرجحة" },
-  VARIANCE: { nameEn: "Variance Analysis", nameAr: "تحليل الفروقات والتباين", descEn: "Theoretical vs actual quantities per period", descAr: "الكميات النظرية مقابل الفعلية لكل فترة" },
-  "PO-OPEN-BALANCE": { nameEn: "Open PO Balance", nameAr: "أوامر الشراء المفتوحة", descEn: "Outstanding purchase commitments", descAr: "التزامات الشراء وأوامر التوريد الجارية" },
-  "SUPPLIER-AP": { nameEn: "Supplier AP", nameAr: "حسابات الموردين والدائنين", descEn: "Accounts payable balances per vendor", descAr: "أرصدة حسابات الموردين المستحقة" },
-  "STOCK-AGING": { nameEn: "Stock Aging", nameAr: "أعمار المخزون وتواريخ الصلاحية", descEn: "Batch expiry risk profile", descAr: "مخاطر انتهاء صلاحية التشغيلات وFEFO" },
-  "VENDOR-SLA": { nameEn: "Vendor SLA", nameAr: "مؤشرات أداء الموردين (SLA)", descEn: "OTIF, price variance, QC rejection", descAr: "نسب الالتزام بالمواعيد والجودة والأسعار" },
-  "MENU-MARGIN": { nameEn: "Menu Margin", nameAr: "هوامش تكاليف الوصفات والقوائم", descEn: "Recipe cost at current WAC", descAr: "تكلفة الوصفة المحدثة بمتوسط التكلفة WAC" },
+const REPORT_META: Record<
+  string,
+  { nameEn: string; nameAr: string; descEn: string; descAr: string; category: "board" | "inventory" | "procurement"; isBoard?: boolean }
+> = {
+  "BOARD-EXECUTIVE-KPI": {
+    nameEn: "Board Executive Scorecard",
+    nameAr: "بطاقة الأداء التنفيذية لمجلس الإدارة",
+    descEn: "Holding KPIs per project: stock value, open POs, spend, waste loss & alerts",
+    descAr: "مؤشرات الأداء العليا لكل مشروع: قيمة المخزون، المشتريات، الهدر والتنبيهات",
+    category: "board",
+    isBoard: true,
+  },
+  "PROJECT-PNL-COGS": {
+    nameEn: "Project P&L & COGS Control",
+    nameAr: "ملخص التكاليف والأرباح (COGS) لكل مشروع",
+    descEn: "Inventory asset, COGS, waste write-off, freight, AP exposure & spend share %",
+    descAr: "أصول المخزون، تكلفة البضاعة، الهدر، الشحن، التزامات الموردين ونسبة الإنفاق",
+    category: "board",
+    isBoard: true,
+  },
+  "ABC-INVENTORY-MATRIX": {
+    nameEn: "ABC Capital Lock-up Matrix",
+    nameAr: "مصفوفة تصنيف المخزون ورأس المال (ABC)",
+    descEn: "Capital distribution across Class A/B/C items with share % and avg unit cost",
+    descAr: "توزيع رأس المال المحجوز عبر فئات الأصناف A و B و C ونسبة كل فئة",
+    category: "board",
+    isBoard: true,
+  },
+  "TRANSFER-LOGISTICS-SLA": {
+    nameEn: "Transfer & Logistics SLA",
+    nameAr: "كفاءة التحويلات واللوجستيات (SLA)",
+    descEn: "Inter-branch transfer volume, discrepancy rates & stale in-transit alerts",
+    descAr: "حجم التحويلات بين الفروع ونسب الفروقات والشحنات المتأخرة > 3 أيام",
+    category: "board",
+    isBoard: true,
+  },
+  "WASTE-SHRINKAGE-BOARD": {
+    nameEn: "Waste & Shrinkage Impact",
+    nameAr: "تحليل الهدر والتوالف وفروقات الجرد",
+    descEn: "Financial impact of waste logs, damage, theft & audit count differences",
+    descAr: "الأثر المالي لسجلات الهدر، التلف، العجز وفروقات الجرد المعتمدة",
+    category: "board",
+    isBoard: true,
+  },
+  "STOCK-VALUATION": { nameEn: "Stock Valuation", nameAr: "تقييم المخزون", descEn: "Item quantities at weighted-average cost", descAr: "كميات الأصناف بالتكلفة المتوسطة المرجحة", category: "inventory" },
+  VARIANCE: { nameEn: "Variance Analysis", nameAr: "تحليل الفروقات والتباين", descEn: "Theoretical vs actual quantities per period", descAr: "الكميات النظرية مقابل الفعلية لكل فترة", category: "inventory" },
+  "PO-OPEN-BALANCE": { nameEn: "Open PO Balance", nameAr: "أوامر الشراء المفتوحة", descEn: "Outstanding purchase commitments", descAr: "التزامات الشراء وأوامر التوريد الجارية", category: "procurement" },
+  "SUPPLIER-AP": { nameEn: "Supplier AP", nameAr: "حسابات الموردين والدائنين", descEn: "Accounts payable balances per vendor", descAr: "أرصدة حسابات الموردين المستحقة", category: "procurement" },
+  "STOCK-AGING": { nameEn: "Stock Aging", nameAr: "أعمار المخزون وتواريخ الصلاحية", descEn: "Batch expiry risk profile", descAr: "مخاطر انتهاء صلاحية التشغيلات وFEFO", category: "inventory" },
+  "VENDOR-SLA": { nameEn: "Vendor SLA", nameAr: "مؤشرات أداء الموردين (SLA)", descEn: "OTIF, price variance, QC rejection", descAr: "نسب الالتزام بالمواعيد والجودة والأسعار", category: "procurement" },
+  "MENU-MARGIN": { nameEn: "Menu Margin", nameAr: "هوامش تكاليف الوصفات والقوائم", descEn: "Recipe cost at current WAC", descAr: "تكلفة الوصفة المحدثة بمتوسط التكلفة WAC", category: "inventory" },
 };
 
 const FREQUENCIES = ["REAL_TIME", "DAILY", "WEEKLY", "MONTHLY"];
@@ -52,12 +95,14 @@ export default function Reports() {
   const snapshots = useApi<ReportSnapshot[]>("/analytics/snapshots/history");
   const schedules = useApi<ScheduledReport[]>("/analytics/schedules/list");
   const [tab, setTab] = useState<"reports" | "snapshots" | "schedules">("reports");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "board" | "inventory" | "procurement">("all");
   const [active, setActive] = useState<string | null>(null);
   const [lang, setLang] = useState<"EN" | "AR">(appLang.toUpperCase() as "EN" | "AR");
   const [result, setResult] = useState<ReportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const boardSummary = useApi<ReportResult>("/analytics/BOARD-EXECUTIVE-KPI?lang=EN");
 
   const snapshotFilter = useListFilter<ReportSnapshot>(snapshots.data, ["reportCode", "period"]);
   const scheduleFilter = useListFilter<ScheduledReport>(schedules.data, ["reportCode", "frequency"]);
@@ -174,12 +219,77 @@ export default function Reports() {
   const cols = result?.rows?.length ? Object.keys(result.rows[0]) : [];
   const snapCols = viewSnapshot?.data?.length ? Object.keys(viewSnapshot.data[0]) : [];
 
+  const boardTotals = (boardSummary.data?.rows ?? []).reduce<{
+    stockValue: number;
+    openPoValue: number;
+    totalSpend: number;
+    wasteLoss: number;
+    alerts: number;
+  }>(
+    (acc, r) => {
+      acc.stockValue += Number(r.stockValue ?? 0);
+      acc.openPoValue += Number(r.openPoValue ?? 0);
+      acc.totalSpend += Number(r.totalSpend ?? 0);
+      acc.wasteLoss += Number(r.wasteLossValue ?? 0);
+      acc.alerts += Number(r.lowStockAlerts ?? 0) + Number(r.expiringBatches ?? 0);
+      return acc;
+    },
+    { stockValue: 0, openPoValue: 0, totalSpend: 0, wasteLoss: 0, alerts: 0 }
+  );
+
+  const exportActiveReportCsv = () => {
+    if (!result || !result.rows.length) return;
+    const esc = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = cols.map(esc).join(",");
+    const lines = result.rows.map((r) => cols.map((c) => esc(r[c])).join(","));
+    const blob = new Blob(["\ufeff" + [header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${result.code.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredDefs = (defs.data ?? []).filter((d) => {
+    if (categoryFilter === "all") return true;
+    return REPORT_META[d.code]?.category === categoryFilter;
+  });
+
   return (
     <>
       <div className="topbar">
         <h1>{t("nav_reports")}</h1>
         <div className="crumb">{t("crumb_reports")}</div>
       </div>
+
+      {boardSummary.data?.rows?.length ? (
+        <div className="kpi-grid" style={{ marginBottom: 18 }}>
+          <div className="kpi">
+            <div className="kpi-l">{appLang === "ar" ? "إجمالي قيمة المخزون (المجموعة)" : "Holding Stock Value"}</div>
+            <div className="kpi-v">{boardTotals.stockValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-l">{appLang === "ar" ? "أوامر الشراء المفتوحة" : "Open PO Commitments"}</div>
+            <div className="kpi-v">{boardTotals.openPoValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-l">{appLang === "ar" ? "إجمالي الإنفاق والمشتريات" : "Total Procurement Spend"}</div>
+            <div className="kpi-v">{boardTotals.totalSpend.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-l">{appLang === "ar" ? "خسائر الهدر والتسويات" : "Waste & Shrinkage Loss"}</div>
+            <div className="kpi-v" style={{ color: "var(--red, #e11d48)" }}>{boardTotals.wasteLoss.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-l">{appLang === "ar" ? "تنبيهات المخزون والصلاحية" : "Active Stock & Expiry Alerts"}</div>
+            <div className="kpi-v" style={{ color: "var(--amber-2, #d97706)" }}>{boardTotals.alerts}</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="tabs">
         <button
@@ -209,16 +319,48 @@ export default function Reports() {
 
       {tab === "reports" && (
         <>
+          <div className="toolbar" style={{ marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
+            {(
+              [
+                { id: "all", en: "All Reports", ar: "جميع التقارير" },
+                { id: "board", en: "Board & Executive", ar: "تقارير مجلس الإدارة" },
+                { id: "inventory", en: "Inventory & Costing", ar: "المخزون والتكاليف" },
+                { id: "procurement", en: "Procurement & Vendors", ar: "المشتريات والموردين" },
+              ] as const
+            ).map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`btn sm ${categoryFilter === cat.id ? "amber" : "ghost"}`}
+                onClick={() => setCategoryFilter(cat.id)}
+              >
+                {appLang === "ar" ? cat.ar : cat.en}
+              </button>
+            ))}
+          </div>
+
           <div className="report-grid" style={{ marginBottom: 22 }}>
             {defs.loading && <Loading />}
             {defs.error && <ErrorBanner message={defs.error} />}
-            {(defs.data ?? []).map((d) => {
+            {filteredDefs.map((d) => {
               const meta = REPORT_META[d.code];
               const name = meta ? (appLang === "ar" ? meta.nameAr : meta.nameEn) : d.name;
               const desc = meta ? (appLang === "ar" ? meta.descAr : meta.descEn) : (d.description ?? "");
               return (
-                <div className="report-card" key={d.id} onClick={() => run(d.code)}>
-                  <div className="code">{d.code}</div>
+                <div
+                  className="report-card"
+                  key={d.id}
+                  onClick={() => run(d.code)}
+                  style={active === d.code ? { borderColor: "var(--amber-2, #d97706)" } : undefined}
+                >
+                  <div className="code" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                    <span>{d.code}</span>
+                    {meta?.isBoard && (
+                      <span className="badge amber" style={{ fontSize: 10 }}>
+                        {appLang === "ar" ? "تنفيذي" : "BOARD"}
+                      </span>
+                    )}
+                  </div>
                   <div className="name">{name}</div>
                   <div className="aud">{desc}</div>
                 </div>
@@ -230,13 +372,18 @@ export default function Reports() {
             <div className="card">
               <h2>
                 {REPORT_META[active] ? (appLang === "ar" ? REPORT_META[active].nameAr : REPORT_META[active].nameEn) : active}
-                <span className="count">
+                <span className="count" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                   <button className={`btn ghost sm ${lang === "EN" ? "primary" : ""}`} onClick={() => toggleLang("EN")}>
                     EN
-                  </button>{" "}
+                  </button>
                   <button className={`btn ghost sm ${lang === "AR" ? "primary" : ""}`} onClick={() => toggleLang("AR")}>
                     AR
-                  </button>{" "}
+                  </button>
+                  {result?.rows?.length ? (
+                    <button className="btn ghost sm" onClick={exportActiveReportCsv}>
+                      {t("common.export_csv")}
+                    </button>
+                  ) : null}
                   {canSnapshot && (
                     <button className="btn sm" onClick={() => snapshot(active)} disabled={busy}>
                       {busy ? "Saving…" : "Snapshot"}
@@ -264,9 +411,21 @@ export default function Reports() {
                           {cols.map((c) => {
                             const v = row[c];
                             const isNum = typeof v === "number";
+                            const strVal = v instanceof Date ? v.toLocaleDateString("en-GB") : String(v ?? "—");
+                            const isBadge =
+                              typeof v === "string" &&
+                              /^(EXPIRED|CRITICAL|WARNING|OK|OPEN|PARTIALLY_RECEIVED|FULLY_RECEIVED|FORCE_CLOSED|REQUESTED|APPROVED|DISPATCHED|IN_TRANSIT|RECEIVED|CANCELLED|PENDING|REJECTED)$/i.test(
+                                v
+                              );
                             return (
                               <td key={c} className={isNum ? "num" : ""}>
-                                {v instanceof Date ? v.toLocaleDateString("en-GB") : String(v ?? "—")}
+                                {isBadge ? (
+                                  <Badge status={v as string} />
+                                ) : isNum ? (
+                                  (v as number).toLocaleString("en-US", { maximumFractionDigits: 2 })
+                                ) : (
+                                  strVal
+                                )}
                               </td>
                             );
                           })}

@@ -228,6 +228,36 @@ const AR_TRANSLATIONS: Translations = {
   "history.by": "بواسطة",
   "history.no_changes": "لا توجد حقول مسجلة لهذا الإجراء.",
   "history.hash": "رمز التحقق المشفر",
+
+  // View Titles, Breadcrumbs & Tabs (Finance, Suppliers, Reports, Users)
+  "nav_finance": "المالية والحسابات",
+  "crumb_finance": "دليل الحسابات، القيود اليومية، ميزان المراجعة، وحسابات الموردين",
+  "tab_trial_balance": "ميزان المراجعة",
+  "tab_gl_postings": "القيود المحاسبية",
+  "tab_ap_ledger": "دفتر الدائنين (AP)",
+  "tab_chart_accounts": "شجرة الحسابات",
+  "tab_cost_centers": "مراكز التكلفة",
+  "lbl_total_debit": "إجمالي المدين",
+  "lbl_total_credit": "إجمالي الدائن",
+  "lbl_balanced_status": "حالة التوازن",
+
+  "nav_suppliers": "إدارة الموردين",
+  "crumb_suppliers": "سجل الموردين، قوائم الأسعار، ومؤشرات الأداء (SLA)",
+  "btn_new_vendor": "+ مورد جديد",
+  "tab_vendors": "الموردين",
+  "tab_price_lists": "قوائم الأسعار",
+  "tab_sla_scorecards": "بطاقات أداء الموردين (SLA)",
+
+  "nav_reports": "التقارير التنفيذية والتحليلات",
+  "crumb_reports": "تقارير مجلس الإدارة، تقييم المخزون، الأعمار، الفروقات، وربحية القوائم",
+  "tab_reports": "التقارير التنفيذية",
+  "tab_snapshots": "اللقطات المحفوظة",
+  "tab_schedules": "التقارير المجدولة",
+
+  "nav_users": "المستخدمين والصلاحيات",
+  "crumb_users": "حسابات فريق العمل، الأدوار، ومصفوفة الصلاحيات (RBAC)",
+  "tab_user_accounts": "حسابات المستخدمين",
+  "tab_role_matrix": "مصفوفة الصلاحيات",
 };
 
 const EN_TRANSLATIONS: Translations = {
@@ -452,6 +482,36 @@ const EN_TRANSLATIONS: Translations = {
   "history.by": "By",
   "history.no_changes": "No field changes recorded for this action.",
   "history.hash": "Integrity Hash",
+
+  // View Titles, Breadcrumbs & Tabs (Finance, Suppliers, Reports, Users)
+  "nav_finance": "Finance & General Ledger",
+  "crumb_finance": "Chart of Accounts, Journal Postings, Trial Balance & Accounts Payable",
+  "tab_trial_balance": "Trial Balance",
+  "tab_gl_postings": "GL Postings",
+  "tab_ap_ledger": "AP Ledger",
+  "tab_chart_accounts": "Chart of Accounts",
+  "tab_cost_centers": "Cost Centers",
+  "lbl_total_debit": "Total Debit",
+  "lbl_total_credit": "Total Credit",
+  "lbl_balanced_status": "Balance Status",
+
+  "nav_suppliers": "Suppliers & Vendors",
+  "crumb_suppliers": "Vendor Directory, Price Lists, Tiers & SLA Scorecards",
+  "btn_new_vendor": "+ New Vendor",
+  "tab_vendors": "Vendors",
+  "tab_price_lists": "Price Lists",
+  "tab_sla_scorecards": "SLA Scorecards",
+
+  "nav_reports": "Executive & Board Reports",
+  "crumb_reports": "Board KPIs, Stock Valuation, Aging, Variances, Vendor SLA & Snapshots",
+  "tab_reports": "Board & System Reports",
+  "tab_snapshots": "Snapshots",
+  "tab_schedules": "Scheduled Reports",
+
+  "nav_users": "Users & Access Control",
+  "crumb_users": "Staff Accounts, Role Assignments & RBAC Capabilities Matrix",
+  "tab_user_accounts": "User Accounts",
+  "tab_role_matrix": "Role Matrix",
 };
 
 interface I18nContextType {
