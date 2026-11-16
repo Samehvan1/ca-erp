@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+export * from "./components/index";
 
 /** POST/PATCH/DELETE helper against the API with the stored bearer token. */
 export async function apiReq<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+  const token = localStorage.getItem("ca_token");
   const res = await fetch(`/api/v1${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("ca_token")}`,
+      Authorization: `Bearer ${token}`,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401) {
+    localStorage.removeItem("ca_token");
+    localStorage.removeItem("ca_user");
+    window.dispatchEvent(new Event("ca_unauthorized"));
+    throw new Error("Session expired. Please sign in again.");
+  }
   if (!res.ok) {
     const b = await res.json().catch(() => ({}));
     throw new Error(b?.error ?? `Request failed (${res.status})`);
@@ -70,6 +78,12 @@ export function useApi<T>(path: string | null, deps: unknown[] = []) {
       headers: { Authorization: `Bearer ${localStorage.getItem("ca_token")}` },
     })
       .then(async (res) => {
+        if (res.status === 401) {
+          localStorage.removeItem("ca_token");
+          localStorage.removeItem("ca_user");
+          window.dispatchEvent(new Event("ca_unauthorized"));
+          throw new Error("Session expired. Please sign in again.");
+        }
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body?.error ?? `Request failed (${res.status})`);
@@ -230,28 +244,33 @@ interface AuditEntry {
   after: Record<string, unknown> | null;
   timestamp: string;
   hash: string;
-  user?: { name: string } | null;
+  user?: { name: string; email?: string } | null;
 }
 
 function DiffTable({ before, after }: { before: Record<string, unknown> | null; after: Record<string, unknown> | null }) {
   const keys = Array.from(new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]));
   const changed = keys.filter((k) => JSON.stringify(before?.[k]) !== JSON.stringify(after?.[k]));
-  if (changed.length === 0) return <div className="history-none">no field changes recorded</div>;
+  if (changed.length === 0) return <div className="history-none" style={{ color: "var(--muted)", fontStyle: "italic", fontSize: 12.5, padding: "4px 0" }}>No field changes recorded for this action.</div>;
+  const formatVal = (val: unknown) => {
+    if (val === null || val === undefined) return "—";
+    if (typeof val === "object") return JSON.stringify(val);
+    return String(val);
+  };
   return (
-    <table className="tbl history-diff">
+    <table className="tbl history-diff" style={{ marginTop: 6, fontSize: 13 }}>
       <thead>
         <tr>
-          <th>Field</th>
-          <th>Before</th>
-          <th>After</th>
+          <th style={{ width: "25%" }}>Field</th>
+          <th style={{ width: "37.5%" }}>Original (Before)</th>
+          <th style={{ width: "37.5%" }}>New (After)</th>
         </tr>
       </thead>
       <tbody>
         {changed.map((k) => (
           <tr key={k}>
-            <td className="mono">{k}</td>
-            <td className="muted-cell">{before?.[k] == null ? "—" : String(before[k])}</td>
-            <td>{after?.[k] == null ? "—" : String(after[k])}</td>
+            <td className="mono" style={{ fontWeight: 600, color: "var(--ink)" }}>{k}</td>
+            <td className="muted-cell" style={{ color: "#b91c1c", background: "rgba(239, 68, 68, 0.04)" }}>{formatVal(before?.[k])}</td>
+            <td style={{ color: "#15803d", fontWeight: 500, background: "rgba(34, 197, 94, 0.04)" }}>{formatVal(after?.[k])}</td>
           </tr>
         ))}
       </tbody>
@@ -282,17 +301,25 @@ export function HistoryModal({
       ) : !data || data.length === 0 ? (
         <Empty text="No recorded changes for this record." />
       ) : (
-        data.map((a) => (
-          <div className="history-entry" key={a.id}>
-            <div className="history-head">
-              <Badge status={a.action} />
-              <span className="ts">{new Date(a.timestamp).toLocaleString("en-GB")}</span>
-              <span className="who">{a.user?.name ?? "system"}</span>
-              <span className="hash">{a.hash.slice(0, 10)}…</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {data.map((a) => (
+            <div className="history-entry" key={a.id} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, background: "var(--card)" }}>
+              <div className="history-head" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <Badge status={a.action} />
+                <span className="ts" style={{ fontSize: 12, color: "var(--muted)" }}>
+                  ⏱ {new Date(a.timestamp).toLocaleString("en-GB")}
+                </span>
+                <span className="who" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>
+                  👤 By: {a.user?.name || a.user?.email || "System"}
+                </span>
+                <span className="hash mono" style={{ fontSize: 11, color: "var(--muted)", marginLeft: "auto" }} title={`Integrity SHA-256: ${a.hash}`}>
+                  🔒 {a.hash ? `${a.hash.slice(0, 10)}…` : ""}
+                </span>
+              </div>
+              <DiffTable before={a.before} after={a.after} />
             </div>
-            <DiffTable before={a.before} after={a.after} />
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </Modal>
   );

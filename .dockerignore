@@ -1,0 +1,15 @@
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+server/dist
+.git
+.github
+.opencode
+openspec
+*.log
+.env
+.env.local
+server/.env
+.DS_Store
+Thumbs.db

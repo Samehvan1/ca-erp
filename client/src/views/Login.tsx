@@ -1,9 +1,11 @@
 import { FormEvent, useState } from "react";
 import { api, User } from "../api";
+import { useI18n, LanguageSwitcher } from "../lib/i18n";
 
 type Mode = "login" | "forgot" | "reset";
 
 export default function Login({ onLogin }: { onLogin: (token: string, user: User) => void }) {
+  const { t, isRtl } = useI18n();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("admin@capitalagro.com");
   const [password, setPassword] = useState("Admin@123");
@@ -25,7 +27,7 @@ export default function Login({ onLogin }: { onLogin: (token: string, user: User
       });
       onLogin(res.token, res.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : (isRtl ? "فشل تسجيل الدخول" : "Login failed"));
     } finally {
       setBusy(false);
     }
@@ -44,12 +46,12 @@ export default function Login({ onLogin }: { onLogin: (token: string, user: User
       if (res.devToken) {
         setResetToken(res.devToken);
         setMode("reset");
-        setInfo("Development token issued — enter a new password below.");
+        setInfo(isRtl ? "تم إصدار رمز الاستعادة التجريبي — أدخل كلمة المرور الجديدة بالأسفل." : "Development token issued — enter a new password below.");
       } else {
-        setInfo("If an account exists for that email, a reset link has been sent.");
+        setInfo(isRtl ? "إذا كان الحساب مسجلاً، تم إرسال رابط إعادة التعيين." : "If an account exists for that email, a reset link has been sent.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      setError(err instanceof Error ? err.message : (isRtl ? "فشل الطلب" : "Request failed"));
     } finally {
       setBusy(false);
     }
@@ -68,55 +70,67 @@ export default function Login({ onLogin }: { onLogin: (token: string, user: User
       setMode("login");
       setResetToken("");
       setResetPassword("");
-      setInfo("Password updated — sign in with your new password.");
+      setInfo(isRtl ? "تم تحديث كلمة المرور — يرجى تسجيل الدخول بكلمة المرور الجديدة." : "Password updated — sign in with your new password.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reset failed");
+      setError(err instanceof Error ? err.message : (isRtl ? "فشل التعيين" : "Reset failed"));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="login-wrap">
+    <div className={`login-wrap ${isRtl ? "rtl" : ""}`}>
       <div className="login-art">
-        <div className="inner">
+        <div className="inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div className="mark" style={{ fontFamily: "var(--serif)", fontSize: 22, fontWeight: 600 }}>
-            Capital <em style={{ color: "var(--amber-2)" }}>Agro</em>
+            {isRtl ? "كابيتال " : "Capital "}
+            <em style={{ color: "var(--amber-2)" }}>{isRtl ? "أجرو" : "Agro"}</em>
           </div>
+          <LanguageSwitcher />
         </div>
         <div className="inner">
           <h1>
-            One ledger for every <em>outlet, kitchen &amp; depot.</em>
+            {isRtl ? (
+              <>نظام مالي ومخزني متكامل <em>لكل منفذ، مطبخ، ومستودع مركزي.</em></>
+            ) : (
+              <>One ledger for every <em>outlet, kitchen &amp; depot.</em></>
+            )}
           </h1>
           <p>
-            Enterprise stock control and purchasing across the Fanshy, Osta Rosto and Spacca brands — requisitions to
-            receipts, batches to balances, all hash-chained and auditable.
+            {isRtl ? (
+              "إدارة المخزون والمشتريات الشاملة لعلامات فانشي، أسطى روستو، وسپاكا كافيه — من طلبات الاحتياج إلى الاستلام الفعلي، تتبع الشحنات وسلاسل التشفير لجميع الحركات."
+            ) : (
+              "Enterprise stock control and purchasing across the Fanshy, Osta Rosto and Spacca brands — requisitions to receipts, batches to balances, all hash-chained and auditable."
+            )}
           </p>
         </div>
         <div className="inner brands">
-          <span>Fanshy</span>
-          <span>Osta Rosto</span>
-          <span>Spacca</span>
-          <span>Holding</span>
+          <span>Fanshy (فانشي)</span>
+          <span>Osta Rosto (أسطى روستو)</span>
+          <span>Spacca (سپاكا)</span>
+          <span>Holding (القابضة)</span>
         </div>
       </div>
       <div className="login-form">
         {mode === "login" && (
           <form className="login-card" onSubmit={submit}>
-            <h2>Sign in</h2>
-            <div className="sub">Access the group operations console.</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2>{isRtl ? "تسجيل الدخول" : "Sign in"}</h2>
+              <LanguageSwitcher />
+            </div>
+            <div className="sub">{isRtl ? "لوحة التحكم وإدارة العمليات للمجموعة" : "Access the group operations console."}</div>
             {error && <div className="err">{error}</div>}
             {info && <div className="ok">{info}</div>}
             <div className="field">
-              <label>Email</label>
+              <label>{isRtl ? "البريد الإلكتروني" : "Email"}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
             </div>
             <div className="field">
-              <label>Password</label>
+              <label>{isRtl ? "كلمة المرور" : "Password"}</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </div>
             <button className="btn amber" style={{ width: "100%", marginTop: 6 }} disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
+              {busy ? (isRtl ? "جاري الدخول..." : "Signing in…") : (isRtl ? "دخول النظام" : "Sign in")}
             </button>
             <button
               type="button"
@@ -128,12 +142,12 @@ export default function Login({ onLogin }: { onLogin: (token: string, user: User
                 setMode("forgot");
               }}
             >
-              Forgot password?
+              {isRtl ? "نسيت كلمة المرور؟" : "Forgot password?"}
             </button>
             <div className="demo">
               admin@capitalagro.com / Admin@123
               <br />
-              bm.fanshy@capitalagro.com / Admin@123 (scoped)
+              bm.fanshy@capitalagro.com / Admin@123
             </div>
           </form>
         )}

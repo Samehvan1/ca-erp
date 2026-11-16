@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ca-erp-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mero1901}
+      POSTGRES_DB: ${DB_NAME:-capital_agro_erp}
+    ports:
+      - "5433:5432"
+    volumes:
+      - ca_erp_db_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ca-erp-app
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-mero1901}@db:5432/${DB_NAME:-capital_agro_erp}
+      JWT_SECRET: ${JWT_SECRET:-capital-agro-production-super-secret-jwt-key-2026}
+      AUTO_SEED: ${AUTO_SEED:-true}
+      TZ: ${TZ:-Africa/Cairo}
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+    volumes:
+      - ca_erp_backups:/app/server/backups
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  ca_erp_db_data:
+  ca_erp_backups:
