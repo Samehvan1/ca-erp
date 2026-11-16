@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { api, clearSession, getUser, setSession, User } from "./api";
 import { Toast } from "./components";
@@ -34,6 +34,15 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState({ current: "", next: "" });
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearSession();
+      setUser(null);
+    };
+    window.addEventListener("ca_unauthorized", handleUnauthorized);
+    return () => window.removeEventListener("ca_unauthorized", handleUnauthorized);
+  }, []);
 
   const onLogin = (token: string, u: User) => {
     setSession(token, u);
