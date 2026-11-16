@@ -267,26 +267,31 @@ export default function Reports() {
       </div>
 
       {boardSummary.data?.rows?.length ? (
-        <div className="kpi-grid" style={{ marginBottom: 18 }}>
+        <div className="grid kpis" style={{ marginBottom: 22 }}>
           <div className="kpi">
-            <div className="kpi-l">{appLang === "ar" ? "إجمالي قيمة المخزون (المجموعة)" : "Holding Stock Value"}</div>
-            <div className="kpi-v">{boardTotals.stockValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="label">{appLang === "ar" ? "إجمالي قيمة المخزون (المجموعة)" : "Holding Stock Value"}</div>
+            <div className="value">{boardTotals.stockValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="hint">{appLang === "ar" ? "عبر جميع المستودعات والفروع" : "Across all warehouses"}</div>
           </div>
           <div className="kpi">
-            <div className="kpi-l">{appLang === "ar" ? "أوامر الشراء المفتوحة" : "Open PO Commitments"}</div>
-            <div className="kpi-v">{boardTotals.openPoValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="label">{appLang === "ar" ? "أوامر الشراء المفتوحة" : "Open PO Commitments"}</div>
+            <div className="value">{boardTotals.openPoValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="hint">{appLang === "ar" ? "قيد التوريد والاستلام" : "Pending delivery & GRN"}</div>
           </div>
           <div className="kpi">
-            <div className="kpi-l">{appLang === "ar" ? "إجمالي الإنفاق والمشتريات" : "Total Procurement Spend"}</div>
-            <div className="kpi-v">{boardTotals.totalSpend.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="label">{appLang === "ar" ? "إجمالي الإنفاق والمشتريات" : "Total Procurement Spend"}</div>
+            <div className="value">{boardTotals.totalSpend.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="hint">{appLang === "ar" ? "إجمالي قيمة أوامر الشراء" : "Total PO volume"}</div>
           </div>
           <div className="kpi">
-            <div className="kpi-l">{appLang === "ar" ? "خسائر الهدر والتسويات" : "Waste & Shrinkage Loss"}</div>
-            <div className="kpi-v" style={{ color: "var(--red, #e11d48)" }}>{boardTotals.wasteLoss.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="label">{appLang === "ar" ? "خسائر الهدر والتسويات" : "Waste & Shrinkage Loss"}</div>
+            <div className="value bad">{boardTotals.wasteLoss.toLocaleString("en-US", { maximumFractionDigits: 0 })} {t("common.egp")}</div>
+            <div className="hint">{appLang === "ar" ? "هالك وفروقات معتمدة" : "Approved waste & adjustments"}</div>
           </div>
           <div className="kpi">
-            <div className="kpi-l">{appLang === "ar" ? "تنبيهات المخزون والصلاحية" : "Active Stock & Expiry Alerts"}</div>
-            <div className="kpi-v" style={{ color: "var(--amber-2, #d97706)" }}>{boardTotals.alerts}</div>
+            <div className="label">{appLang === "ar" ? "تنبيهات المخزون والصلاحية" : "Active Stock & Expiry Alerts"}</div>
+            <div className={`value ${boardTotals.alerts > 0 ? "warn" : "ok"}`}>{boardTotals.alerts}</div>
+            <div className="hint">{appLang === "ar" ? "إعادة طلب + صلاحية < 30 يوم" : "Low stock + expiring < 30d"}</div>
           </div>
         </div>
       ) : null}
