@@ -89,6 +89,164 @@ const REPORT_META: Record<
 
 const FREQUENCIES = ["REAL_TIME", "DAILY", "WEEKLY", "MONTHLY"];
 
+const COLUMN_TOOLTIPS: Record<string, { en: string; ar: string }> = {
+  // Transfer & Logistics SLA
+  status: { en: "Current lifecycle stage of the record (e.g., REQUESTED, IN_TRANSIT, RECEIVED, OPEN).", ar: "المرحلة الحالية للسجل في دورة العمل (مثل: مطلوب، في الطريق، مستلم، مفتوح)." },
+  transferCount: { en: "Total number of transfer orders currently in this status.", ar: "إجمالي عدد أوامر التحويل الموجودة حالياً في هذه الحالة." },
+  totalUnitsMoved: { en: "Sum of all item quantities requested/moved across these transfers.", ar: "مجموع كميات الأصناف المطلوبة أو المنقولة عبر هذه التحويلات." },
+  discrepancyUnits: { en: "Total units lost, damaged, or short-received between dispatch and receipt.", ar: "إجمالي الوحدات المفقودة أو التالفة أو الناقصة بين الشحن والاستلام." },
+  discrepancyPct: { en: "Percentage of moved units lost or mismatched: (Discrepancy Units / Total Units Moved) × 100.", ar: "نسبة الفروقات من إجمالي الوحدات المنقولة: (فروقات الاستلام ÷ إجمالي المنقول) × 100." },
+  staleOver3Days: { en: "Count of in-transit or dispatched transfers delayed more than 3 days without receipt.", ar: "عدد التحويلات المشحونة أو قيد النقل المتأخرة لأكثر من 3 أيام دون استلام." },
+
+  // Board Executive KPI & P&L
+  projectCode: { en: "Short identifier code for the brand or holding entity.", ar: "الكود التعريفي المختصر للمشروع أو العلامة التجارية." },
+  project: { en: "Brand, outlet group, or holding entity name.", ar: "اسم المشروع أو العلامة التجارية أو المجموعة." },
+  stockValue: { en: "Total on-hand inventory valuation across the project's warehouses at current unit cost.", ar: "إجمالي قيمة المخزون المتاح حالياً في مستودعات المشروع بالتكلفة الحالية." },
+  poCount: { en: "Total number of purchase orders issued for this project or vendor.", ar: "إجمالي عدد أوامر الشراء الصادرة لهذا المشروع أو المورد." },
+  openPoValue: { en: "Total monetary value of purchase orders still OPEN or PARTIALLY_RECEIVED.", ar: "إجمالي قيمة أوامر الشراء المفتوحة أو المستلمة جزئياً بانتظار التوريد." },
+  totalSpend: { en: "Cumulative procurement spend across non-closed purchase orders.", ar: "إجمالي الإنفاق والمشتريات عبر أوامر الشراء." },
+  wasteLossValue: { en: "Estimated financial loss from approved waste logs and stock adjustments.", ar: "القيمة المالية المقدرة للخسائر من سجلات الهدر والتسويات المعتمدة." },
+  pendingApprovals: { en: "Number of purchase requisitions awaiting management/CFO approval.", ar: "عدد طلبات الشراء المعلقة بانتظار اعتماد الإدارة أو المدير المالي." },
+  lowStockAlerts: { en: "Count of item-warehouse pairs at or below their Reorder Point (ROP).", ar: "عدد الأصناف التي وصلت إلى حد إعادة الطلب أو أقل منه." },
+  expiringBatches: { en: "Active stock batches expiring within the next 30 days (including already expired).", ar: "عدد التشغيلات النشطة التي تنتهي صلاحيتها خلال 30 يوماً أو انتهت بالفعل." },
+  inTransitTransfers: { en: "Transfers currently dispatched or in transit involving this project.", ar: "التحويلات المشحونة أو الجارية في الطريق المرتبطة بهذا المشروع." },
+  inventoryAsset: { en: "Net General Ledger balance of Inventory Asset account (1000).", ar: "صافي رصيد حساب أصول المخزون (1000) في دفتر الأستاذ العام." },
+  cogsDebit: { en: "Cost of Goods Sold debits (account 5000) posted to this project's cost centers.", ar: "مدين تكلفة البضاعة المباعة (حساب 5000) المرحّل لمراكز تكلفة المشروع." },
+  wasteDebit: { en: "Waste write-off expenses (account 5100) recorded against this project.", ar: "مصروفات إعدام الهدر والتوالف (حساب 5100) المسجلة على المشروع." },
+  freightDebit: { en: "Freight, customs, and clearance charges (account 5200) allocated to the project.", ar: "مصروفات الشحن والجمارك والتخليص (حساب 5200) المخصصة للمشروع." },
+  apExposure: { en: "Outstanding Accounts Payable liability (account 3000) owed to suppliers.", ar: "إجمالي التزامات الموردين المستحقة (حساب 3000)." },
+  spendSharePct: { en: "Project's percentage share of total holding procurement spend.", ar: "نسبة إنفاق المشروع من إجمالي إنفاق المجموعة القابضة." },
+
+  // ABC Matrix
+  abcClass: { en: "ABC inventory tier: A = high-value critical items, B = moderate value, C = low-value bulk.", ar: "تصنيف ABC: فئة A عالية القيمة والأهمية، B متوسطة، C منخفضة القيمة." },
+  itemCount: { en: "Number of distinct master items belonging to this ABC class.", ar: "عدد الأصناف الفريدة المصنفة ضمن هذه الفئة." },
+  totalQty: { en: "Total physical units on hand across all items in this class.", ar: "إجمالي الكميات الفعلية المتوفرة لجميع أصناف هذه الفئة." },
+  capitalSharePct: { en: "Percentage of total holding inventory capital tied up in this ABC class.", ar: "نسبة رأس المال المحجوز في هذه الفئة من إجمالي قيمة مخزون المجموعة." },
+  avgUnitCost: { en: "Blended average cost per unit across items in this class (Total Value / Total Qty).", ar: "متوسط تكلفة الوحدة المرجح لهذه الفئة (إجمالي القيمة ÷ إجمالي الكمية)." },
+
+  // Waste & Shrinkage
+  source: { en: "Origin module of the loss: WASTE_LOG (kitchen/bar waste) or STOCK_ADJUSTMENT (audit/damage).", ar: "مصدر الخسارة: سجل الهدر (WASTE_LOG) أو تسويات المخزون (STOCK_ADJUSTMENT)." },
+  category: { en: "Specific loss reason (e.g., Spoilage, DAMAGE, THEFT, COUNT_DIFFERENCE).", ar: "سبب الخسارة المحدد (مثل: تلف، سرقة، فرق جرد، انتهاء صلاحية)." },
+  eventCount: { en: "Number of logged incidents matching this source, reason, and status.", ar: "عدد الحالات المسجلة لنفس المصدر والسبب والحالة." },
+  totalUnitsLost: { en: "Total physical quantity written off or lost across these incidents.", ar: "إجمالي الكمية الفعلية المفقودة أو المعدومة عبر هذه الحالات." },
+  financialImpact: { en: "Estimated or booked monetary loss (EGP) resulting from these incidents.", ar: "الأثر المالي المقدر أو المسجل بالعملة المحلية نتيجة هذه الحالات." },
+
+  // Core Reports
+  itemCode: { en: "Unique SKU/item master code.", ar: "الكود الفريد للصنف في دليل الأصناف." },
+  item: { en: "Item name and description.", ar: "اسم ووصف الصنف." },
+  qty: { en: "Current on-hand quantity in stock.", ar: "الكمية المتوفرة حالياً في المخزن." },
+  wac: { en: "Weighted Average Cost per unit based on active stock ledger balances.", ar: "متوسط التكلفة المرجح للوحدة بناءً على أرصدة المخزون النشطة." },
+  value: { en: "Total stock value (Qty × WAC).", ar: "إجمالي قيمة المخزون (الكمية × متوسط التكلفة)." },
+  valuationMethod: { en: "Costing method applied to the item (WAC or FIFO).", ar: "طريقة تقييم التكلفة المطبقة على الصنف (متوسط مرجح WAC أو الوارد أولاً FIFO)." },
+  period: { en: "Accounting or inventory count period (YYYY-MM).", ar: "الفترة المحاسبية أو فترة الجرد." },
+  warehouse: { en: "Warehouse or branch store code.", ar: "كود المستودع أو مخزن الفرع." },
+  theoreticalQty: { en: "Expected stock quantity calculated from recipes/POS sales and movements.", ar: "الكمية النظرية المتوقعة وفقاً للمبيعات والوصفات وحركة المخزن." },
+  actualQty: { en: "Physical quantity counted during stocktaking.", ar: "الكمية الفعلية المعدودة أثناء الجرد." },
+  varianceQty: { en: "Difference between actual and theoretical quantity (Actual − Theoretical).", ar: "الفرق بين الكمية الفعلية والنظرية (الفعلي − النظري)." },
+  variancePct: { en: "Variance percentage relative to theoretical consumption.", ar: "نسبة الفرق مقارنة بالكمية النظرية." },
+  poNumber: { en: "Purchase Order reference number.", ar: "الرقم المرجعي لأمر الشراء." },
+  vendor: { en: "Supplier / vendor name.", ar: "اسم المورد." },
+  orderedQty: { en: "Total quantity ordered on the Purchase Order.", ar: "إجمالي الكمية المطلوبة في أمر الشراء." },
+  receivedQty: { en: "Quantity already received via GRN.", ar: "الكمية المستلمة فعلياً عبر سندات الاستلام." },
+  outstandingQty: { en: "Remaining quantity still awaiting delivery (Ordered − Received).", ar: "الكمية المتبقية قيد التوريد (المطلوب − المستلم)." },
+  totalValue: { en: "Total monetary value of the Purchase Order or ABC tier.", ar: "القيمة المالية الإجمالية لأمر الشراء أو الفئة." },
+  balance: { en: "Current unpaid Accounts Payable balance owed to the supplier.", ar: "الرصيد المستحق حالياً للمورد في دفتر الدائنين." },
+  entries: { en: "Total number of AP ledger postings (invoices & payments) for this vendor.", ar: "عدد القيود المسجلة في دفتر الدائنين لهذا المورد." },
+  batchNo: { en: "Lot / batch tracking number.", ar: "رقم التشغيلة / الدفعة." },
+  expiryDate: { en: "Batch expiration date.", ar: "تاريخ انتهاء صلاحية الدفعة." },
+  daysToExpiry: { en: "Days remaining until expiry (negative means already expired).", ar: "الأيام المتبقية حتى الانتهاء (القيم السالبة تعني منتهي الصلاحية)." },
+  risk: { en: "Expiry risk tier: EXPIRED (<0d), CRITICAL (≤7d), WARNING (≤30d), OK (>30d).", ar: "مستوى مخاطر الصلاحية: منتهي، حرج (≤7 أيام)، تحذير (≤30 يوم)، آمن." },
+  slaCount: { en: "Number of periodic SLA evaluations recorded for this vendor.", ar: "عدد تقييمات الأداء المسجلة لهذا المورد." },
+  otifRate: { en: "On-Time In-Full delivery rate (%) — higher is better.", ar: "نسبة التسليم الكامل في الموعد المحدد (%) — الأعلى أفضل." },
+  priceVarianceRate: { en: "Invoice vs. PO price variance rate (%) — lower is better.", ar: "نسبة انحراف سعر الفاتورة عن أمر الشراء (%) — الأقل أفضل." },
+  qcRejectionRate: { en: "Percentage of delivered goods rejected/quarantined at QC — lower is better.", ar: "نسبة البضائع المرفوضة أو المحجوزة في فحص الجودة (%) — الأقل أفضل." },
+  docAccuracyRate: { en: "Accuracy rate (%) of supplier invoices and delivery paperwork.", ar: "نسبة دقة الفواتير ومستندات التوريد (%)." },
+  recipe: { en: "Menu item or prep recipe name.", ar: "اسم الوصفة أو الصنف المباع." },
+  type: { en: "Recipe category (MENU_ITEM, PREP, or FINISHED_GOOD).", ar: "نوع الوصفة (صنف قائمة، تحضير، منتج تام)." },
+  cost: { en: "Calculated recipe cost at current WAC including yield factor & shrinkage.", ar: "تكلفة الوصفة المحسوبة بمتوسط التكلفة الحالي مع احتساب الفاقد والهالك." },
+};
+
+function getColumnTooltip(colKey: string, appLang: "ar" | "en"): string | null {
+  if (COLUMN_TOOLTIPS[colKey]) {
+    return appLang === "ar" ? COLUMN_TOOLTIPS[colKey].ar : COLUMN_TOOLTIPS[colKey].en;
+  }
+  // Fallback lookup if report was switched to AR headers
+  const arMatch = Object.entries(AR_KEY_REVERSE_MAP).find(([arLabel]) => arLabel === colKey);
+  if (arMatch && COLUMN_TOOLTIPS[arMatch[1]]) {
+    const t = COLUMN_TOOLTIPS[arMatch[1]];
+    return appLang === "ar" ? t.ar : t.en;
+  }
+  return null;
+}
+
+const AR_KEY_REVERSE_MAP: Record<string, string> = {
+  "كود الصنف": "itemCode",
+  "الصنف": "item",
+  "الكمية": "qty",
+  "متوسط التكلفة": "wac",
+  "القيمة": "value",
+  "طريقة التقييم": "valuationMethod",
+  "الفترة": "period",
+  "المخزن": "warehouse",
+  "الكمية النظرية": "theoreticalQty",
+  "الكمية الفعلية": "actualQty",
+  "فرق الكمية": "varianceQty",
+  "نسبة الفرق": "variancePct",
+  "رقم أمر الشراء": "poNumber",
+  "المورد": "vendor",
+  "المشروع": "project",
+  "كود المشروع": "projectCode",
+  "الحالة": "status",
+  "الكمية المطلوبة": "orderedQty",
+  "الكمية المستلمة": "receivedQty",
+  "الكمية المتبقية": "outstandingQty",
+  "القيمة الإجمالية": "totalValue",
+  "الرصيد": "balance",
+  "القيود": "entries",
+  "رقم الدفعة": "batchNo",
+  "تاريخ الانتهاء": "expiryDate",
+  "أيام حتى الانتهاء": "daysToExpiry",
+  "المخاطر": "risk",
+  "عدد تقييمات الأداء": "slaCount",
+  "نسبة التسليم الكامل في الوقت": "otifRate",
+  "نسبة انحراف السعر": "priceVarianceRate",
+  "نسبة رفض الجودة": "qcRejectionRate",
+  "دقة المستندات": "docAccuracyRate",
+  "عدد أوامر الشراء": "poCount",
+  "الوصفة": "recipe",
+  "النوع": "type",
+  "التكلفة": "cost",
+  "قيمة المخزون": "stockValue",
+  "قيمة أوامر الشراء المفتوحة": "openPoValue",
+  "إجمالي المشتريات": "totalSpend",
+  "قيمة الهدر والتسويات": "wasteLossValue",
+  "اعتمادات معلقة": "pendingApprovals",
+  "تنبيهات انخفاض المخزون": "lowStockAlerts",
+  "تشغيلات قريبة الانتهاء": "expiringBatches",
+  "تحويلات قيد النقل": "inTransitTransfers",
+  "تكلفة البضاعة المباعة (COGS)": "cogsDebit",
+  "مصروف الهدر والتوالف": "wasteDebit",
+  "تكاليف الشحن والجمارك": "freightDebit",
+  "أصول المخزون": "inventoryAsset",
+  "التزامات الموردين": "apExposure",
+  "نسبة الإنفاق %": "spendSharePct",
+  "التصنيف (ABC)": "abcClass",
+  "عدد الأصناف": "itemCount",
+  "إجمالي الكمية": "totalQty",
+  "نسبة رأس المال المحجوز %": "capitalSharePct",
+  "متوسط تكلفة الوحدة": "avgUnitCost",
+  "عدد التحويلات": "transferCount",
+  "إجمالي الوحدات المنقولة": "totalUnitsMoved",
+  "فروقات الاستلام": "discrepancyUnits",
+  "نسبة الفروقات %": "discrepancyPct",
+  "متأخر > 3 أيام": "staleOver3Days",
+  "المصدر": "source",
+  "الفئة / السبب": "category",
+  "عدد الحالات": "eventCount",
+  "إجمالي الوحدات المفقودة": "totalUnitsLost",
+  "الأثر المالي (ج.م)": "financialImpact",
+};
+
 export default function Reports() {
   const { t, lang: appLang } = useI18n();
   const defs = useApi<ReportDef[]>("/analytics/definitions");
@@ -102,6 +260,7 @@ export default function Reports() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [pinnedColInfo, setPinnedColInfo] = useState<{ col: string; desc: string } | null>(null);
   const boardSummary = useApi<ReportResult>("/analytics/BOARD-EXECUTIVE-KPI?lang=EN");
 
   const snapshotFilter = useListFilter<ReportSnapshot>(snapshots.data, ["reportCode", "period"]);
@@ -119,6 +278,7 @@ export default function Reports() {
   const run = async (code: string, l?: "EN" | "AR") => {
     const useLang = l ?? lang;
     setActive(code);
+    setPinnedColInfo(null);
     setBusy(true);
     setError(null);
     setResult(null);
@@ -401,44 +561,117 @@ export default function Reports() {
               ) : !result ? null : result.rows.length === 0 ? (
                 <Empty text="No rows for this report." />
               ) : (
-                <div className="tbl-wrap">
-                  <table className="tbl">
-                    <thead>
-                      <tr>
-                        {cols.map((c) => (
-                          <th key={c}>{c}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.rows.map((row, i) => (
-                        <tr key={i}>
+                <>
+                  {pinnedColInfo && (
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: "rgba(217, 119, 6, 0.1)",
+                        border: "1px solid rgba(217, 119, 6, 0.3)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                        fontSize: 12.5,
+                      }}
+                    >
+                      <div>
+                        <strong style={{ color: "var(--amber-2, #d97706)" }}>{pinnedColInfo.col}:</strong>{" "}
+                        <span>{pinnedColInfo.desc}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        onClick={() => setPinnedColInfo(null)}
+                        aria-label="Close column description"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
                           {cols.map((c) => {
-                            const v = row[c];
-                            const isNum = typeof v === "number";
-                            const strVal = v instanceof Date ? v.toLocaleDateString("en-GB") : String(v ?? "—");
-                            const isBadge =
-                              typeof v === "string" &&
-                              /^(EXPIRED|CRITICAL|WARNING|OK|OPEN|PARTIALLY_RECEIVED|FULLY_RECEIVED|FORCE_CLOSED|REQUESTED|APPROVED|DISPATCHED|IN_TRANSIT|RECEIVED|CANCELLED|PENDING|REJECTED)$/i.test(
-                                v
-                              );
+                            const tip = getColumnTooltip(c, appLang);
+                            const isPinned = pinnedColInfo?.col === c;
                             return (
-                              <td key={c} className={isNum ? "num" : ""}>
-                                {isBadge ? (
-                                  <Badge status={v as string} />
-                                ) : isNum ? (
-                                  (v as number).toLocaleString("en-US", { maximumFractionDigits: 2 })
-                                ) : (
-                                  strVal
-                                )}
-                              </td>
+                              <th
+                                key={c}
+                                title={tip ?? undefined}
+                                onClick={() => {
+                                  if (!tip) return;
+                                  setPinnedColInfo((prev) => (prev?.col === c ? null : { col: c, desc: tip }));
+                                }}
+                                style={
+                                  tip
+                                    ? {
+                                        cursor: "pointer",
+                                        userSelect: "none",
+                                        textDecoration: isPinned ? "underline" : undefined,
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <span>{c}</span>
+                                  {tip && (
+                                    <span
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: 14,
+                                        height: 14,
+                                        borderRadius: "50%",
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        background: isPinned ? "var(--amber-2, #d97706)" : "rgba(148, 163, 184, 0.25)",
+                                        color: isPinned ? "#fff" : "inherit",
+                                      }}
+                                    >
+                                      ?
+                                    </span>
+                                  )}
+                                </span>
+                              </th>
                             );
                           })}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {result.rows.map((row, i) => (
+                          <tr key={i}>
+                            {cols.map((c) => {
+                              const v = row[c];
+                              const isNum = typeof v === "number";
+                              const strVal = v instanceof Date ? v.toLocaleDateString("en-GB") : String(v ?? "—");
+                              const isBadge =
+                                typeof v === "string" &&
+                                /^(EXPIRED|CRITICAL|WARNING|OK|OPEN|PARTIALLY_RECEIVED|FULLY_RECEIVED|FORCE_CLOSED|REQUESTED|APPROVED|DISPATCHED|IN_TRANSIT|RECEIVED|CANCELLED|PENDING|REJECTED)$/i.test(
+                                  v
+                                );
+                              return (
+                                <td key={c} className={isNum ? "num" : ""}>
+                                  {isBadge ? (
+                                    <Badge status={v as string} />
+                                  ) : isNum ? (
+                                    (v as number).toLocaleString("en-US", { maximumFractionDigits: 2 })
+                                  ) : (
+                                    strVal
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}
